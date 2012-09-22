@@ -68,7 +68,7 @@ trait Mailbox [A] extends Maildrop [A] {
 }
 
 private class MailboxImpl [A] (protected [this] val scheduler: Scheduler)
-extends AtomicStateWithSuspendable with Mailbox [A] {
+extends AtomicState with Mailbox [A] {
   import scheduler.spawn
 
   private type Msgs = List [A]

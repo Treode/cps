@@ -22,9 +22,9 @@ import java.nio.channels.{
   ClosedChannelException,
   UnsupportedAddressTypeException}
 import com.treode.cps.scheduler.Scheduler
-import com.treode.cps.sync.SoftStateWithSuspendable
+import com.treode.cps.sync.AtomicState
 
-trait AbstractSocketStub extends NetworkChannel with SoftStateWithSuspendable {
+trait AbstractSocketStub extends NetworkChannel with AtomicState {
 
   protected def asyncClose = new AsynchronousCloseException
   protected def closed = new ClosedChannelException

@@ -35,7 +35,7 @@ trait Future [+A] {
 /** The computation has not run. */
 private class Promise [A] (
   protected [this] val scheduler: Scheduler
-) extends Future [A] with AtomicStateWithSuspendable {
+) extends Future [A] with AtomicState {
 
   protected [this] trait State {
 

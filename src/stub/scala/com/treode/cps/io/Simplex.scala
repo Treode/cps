@@ -22,7 +22,7 @@ import scala.util.Random
 import com.treode.cps.scheduler.Scheduler
 import com.treode.cps.sync.AtomicState
 
-private class Simplex (random: Random, scheduler: Scheduler) extends AtomicState {
+private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicState {
   import scheduler.suspend
 
   initialize (Empty)

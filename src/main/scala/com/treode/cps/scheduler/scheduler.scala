@@ -22,7 +22,8 @@ import com.treode.cps.sync.AtomicState
 
 import TimeUnit.MILLISECONDS
 
-private class SafeThump (s: Scheduler, k: () => Any) extends AtomicState with Runnable {
+private class SafeThump (val scheduler: Scheduler, k: () => Any)
+extends AtomicState with Runnable {
 
   initialize (Suspended)
 
@@ -33,10 +34,10 @@ private class SafeThump (s: Scheduler, k: () => Any) extends AtomicState with Ru
   def run (): Unit = delegate (_.run ())
 
   private def fail (m: String) =
-    s.handleUncaughtException (new IllegalStateException (m))
+    scheduler.handleUncaughtException (new IllegalStateException (m))
 
   private object Suspended extends State {
-    def run () = moveTo (Executed) withEffect (execute (s, k))
+    def run () = moveTo (Executed) withEffect (execute (scheduler, k))
   }
 
   private object Executed extends State {
@@ -48,7 +49,7 @@ private class FastThump (s: Scheduler, k: () => Any) extends Runnable {
   def run (): Unit = execute (s, k)
 }
 
-private class SafeThunk [A] (s: Scheduler, k: Either [Throwable, A] => Any)
+private class SafeThunk [A] (val scheduler: Scheduler, k: Either [Throwable, A] => Any)
 extends AtomicState with Thunk [A] {
 
   initialize (Suspended)
@@ -63,16 +64,16 @@ extends AtomicState with Thunk [A] {
   private [this] object Suspended extends State {
 
     def resume (v: A) =
-      moveTo (Resumed) withEffect (s.spawn (k (Right (v))))
+      moveTo (Resumed) withEffect (scheduler.spawn (k (Right (v))))
 
     def fail (e: Throwable) =
-      moveTo (Resumed) withEffect (s.spawn (k (Left (e))))
+      moveTo (Resumed) withEffect (scheduler.spawn (k (Left (e))))
 
     def flow (v: => A) =
-      moveTo (Resumed) withEffect (catcher (s, k, v))
+      moveTo (Resumed) withEffect (catcher (scheduler, k, v))
 
     def flowS (v: => A @thunk) =
-      moveTo (Resumed) withEffect (catcherS (s, k, v))
+      moveTo (Resumed) withEffect (catcherS (scheduler, k, v))
   }
 
   private [this] object Resumed extends State {

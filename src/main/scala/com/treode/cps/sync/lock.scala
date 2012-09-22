@@ -30,7 +30,7 @@ trait Lock {
 }
 
 private class LockImpl (protected [this] val scheduler: Scheduler)
-extends AtomicStateWithSuspendable with Lock {
+extends AtomicState with Lock {
 
   initialize (Unlocked)
 
