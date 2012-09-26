@@ -17,4 +17,11 @@ Java executor, including `ForkJoinPool`.  An finally, it offers some tools to te
 including a single threaded random scheduler, which deterministically simulates multithreaded
 scheduling; if it reveals a race condition, then it will do so repeatably so that you can debug it.
 
+To use the library, and to include the testing stubs in your tests only, add CPS as a dependency as
+follows:
+
+    libraryDependencies += "com.treode" %% "cps" % "0.1" % "compile;test->scalatest"
+
+Browse the [Scaladoc online](http://treode.github.com/cps/).
+
 For working client and server applications, see the [CPS Example](https://github.com/Treode/cps-example).
