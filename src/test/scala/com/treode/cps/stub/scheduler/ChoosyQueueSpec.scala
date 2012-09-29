@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.treode.collection.mutable
+package com.treode.cps.stub.scheduler
 
 import org.scalatest.WordSpec
 import org.scalatest.junit.JUnitRunner

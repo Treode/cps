@@ -24,7 +24,8 @@ import org.scalatest.PropSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.matchers.ShouldMatchers
-
+import com.treode.cps.CpsPropSpec
+import com.treode.cps.stub.CpsSpecKit
 
 class MailboxSpec extends CpsPropSpec {
 

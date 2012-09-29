@@ -18,7 +18,7 @@ package com.treode.cps.buffer
 import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
 import scala.util.continuations.reset
-import com.treode.cps.io.ByteChannelStub
+import com.treode.cps.stub.io.ByteChannelStub
 
 class InputBufferSpec extends FlatSpec {
   import ByteChannelStub._

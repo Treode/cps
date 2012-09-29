@@ -13,14 +13,15 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package io
+package com.treode.cps.stub.io
 
 import java.nio.ByteBuffer
 import java.nio.channels.ClosedChannelException
 import java.nio.file.{OpenOption, Path}
 import scala.collection.mutable
+import com.treode.cps.thunk
 import com.treode.cps.buffer.Buffer
+import com.treode.cps.io.File
 
 class FileStub private [io] (private [this] var buffer: Option [Buffer]) extends File {
 

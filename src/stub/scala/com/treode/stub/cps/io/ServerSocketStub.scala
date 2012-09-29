@@ -13,12 +13,13 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package io
+package com.treode.cps.stub.io
 
 import java.net.SocketAddress
 import java.nio.channels._
 import scala.collection.mutable
+import com.treode.cps.Thunk
+import com.treode.cps.io.{ServerSocket, Socket}
 import com.treode.cps.scheduler.Scheduler
 
 class ServerSocketStub (protected val scheduler: Scheduler)

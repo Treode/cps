@@ -23,6 +23,7 @@ import org.scalacheck.Gen
 import org.scalatest.{Assertions, FlatSpec, PropSpec}
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.verb.ResultOfStringPassedToVerb
+import com.treode.cps.stub.CpsSpecKit
 
 trait CpsSpecTools extends Assertions {
 

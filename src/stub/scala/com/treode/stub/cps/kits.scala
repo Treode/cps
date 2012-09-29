@@ -13,13 +13,15 @@
  * limitations under the License.
  */
 
-package com.treode.cps
+package com.treode.cps.stub
 
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.{ForkJoinPool, ScheduledThreadPoolExecutor}
 import scala.util.Random
-import com.treode.cps.io.{ServerSocketStub, SocketStub}
-import com.treode.cps.scheduler.{ExecutorStub, Scheduler, SchedulerConfig}
+import com.treode.cps.{CpsKit, CpsSocketKit}
+import com.treode.cps.scheduler.{Scheduler, SchedulerConfig}
+import com.treode.cps.stub.io.{ServerSocketStub, SocketStub}
+import com.treode.cps.stub.scheduler.ExecutorStub
 
 trait CpsSpecKit extends CpsKit {
 

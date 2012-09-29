@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package scheduler
+package com.treode.cps.scheduler
 
 import org.scalatest.FlatSpec
+import com.treode.cps.stub.CpsSpecKit
 
 trait SchedulerBehaviors extends SchedulerChecks {
   this: FlatSpec =>

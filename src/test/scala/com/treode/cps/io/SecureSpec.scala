@@ -28,6 +28,8 @@ import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.prop.PropertyChecks
 import scala.collection.mutable
 import scala.util.Random
+import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.io.{ServerSocketStub, SocketAddressStub, SocketStub}
 
 class SecureSpec extends PropSpec with PropertyChecks with SocketChecks {
 

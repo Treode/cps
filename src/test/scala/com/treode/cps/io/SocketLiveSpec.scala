@@ -21,6 +21,7 @@ import java.nio.channels.{AsynchronousChannelGroup => JGroup}
 import java.util.concurrent.ThreadFactory
 import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
+import com.treode.cps.stub.CpsSpecKit
 
 class SocketLiveSpec extends CpsFlatSpec with SocketBehaviors {
 

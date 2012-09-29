@@ -13,16 +13,13 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package scheduler
-
+package com.treode.cps.stub.scheduler
 
 import java.util.{Collection => JCollection, List => JList}
 import java.util.concurrent.{Future => JFuture, Callable, ScheduledExecutorService,
   ScheduledFuture, TimeUnit}
 import scala.collection.mutable
 import scala.util.Random
-import com.treode.collection.{mutable => tMutable}
 
 private case class ScheduledTask (trigger: Long, r: Runnable)
 
@@ -118,7 +115,7 @@ object ExecutorStub {
   /** An executor that randomly chooses one enqueued task and performs it. */
   def newRandomExecutor (r: Random): ExecutorStub = new ExecutorStub {
 
-    private [this] val queue = tMutable.ChoosyQueue [Runnable] ()
+    private [this] val queue = ChoosyQueue [Runnable] ()
 
     def execute (r: Runnable): Unit = queue.enqueue (r)
 

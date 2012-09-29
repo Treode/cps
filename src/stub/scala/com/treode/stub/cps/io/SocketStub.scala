@@ -13,13 +13,14 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package io
+package com.treode.cps.stub.io
 
 import java.net.{SocketAddress, SocketOption}
 import java.nio.ByteBuffer
 import java.nio.channels._
 import scala.util.Random
+import com.treode.cps.{Thunk, thunk}
+import com.treode.cps.io.Socket
 import com.treode.cps.scheduler.Scheduler
 import com.treode.cps.sync.Mailbox
 

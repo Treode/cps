@@ -13,14 +13,15 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package sync
+package com.treode.cps.sync
 
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 import org.scalatest.{FlatSpec, PropSpec, Specs}
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.PropertyChecks
+import com.treode.cps._
+import com.treode.cps.stub.CpsSpecKit
 
 class LockSpec extends Specs (LockBehaviors, LockProperties)
 

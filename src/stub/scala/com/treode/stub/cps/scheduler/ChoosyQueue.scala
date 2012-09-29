@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.treode.collection.mutable
+package com.treode.cps.stub.scheduler
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random

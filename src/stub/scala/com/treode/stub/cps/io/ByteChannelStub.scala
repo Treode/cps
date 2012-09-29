@@ -13,12 +13,13 @@
  * limitations under the License.
  */
 
-package com.treode.cps.io
+package com.treode.cps.stub.io
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.channels.ClosedChannelException
 import java.nio.charset.Charset
-import com.treode.cps._
+import com.treode.cps.{cut, thunk}
+import com.treode.cps.io.{ScatteringByteChannel, GatheringByteChannel}
 
 private class ByteArrayInputChannel (bytes: Array [Byte]) extends ScatteringByteChannel {
 

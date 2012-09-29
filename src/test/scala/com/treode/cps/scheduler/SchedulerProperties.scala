@@ -13,8 +13,10 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package scheduler
+package com.treode.cps.scheduler
+
+import com.treode.cps.CpsPropSpec
+import com.treode.cps.stub.CpsSpecKit
 
 private [cps] trait SchedulerProperties extends SchedulerChecks {
   this: CpsPropSpec =>

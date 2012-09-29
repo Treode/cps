@@ -13,14 +13,15 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package scheduler
+package com.treode.cps.scheduler
 
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import scala.util.Random
 import org.scalatest.PropSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.PropertyChecks
+import com.treode.cps.CpsPropSpec
+import com.treode.cps.stub.CpsSpecKit
 
 class RandomSpec extends CpsPropSpec with SchedulerProperties {
 

@@ -19,6 +19,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
 import scala.collection.{generic, mutable}
+import com.treode.cps.stub.CpsSpecKit
 
 import CpsConversions._
 

@@ -13,11 +13,11 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package scheduler
+package com.treode.cps.scheduler
 
 import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
+import com.treode.cps.stub.CpsSpecKit
 
 class SequentialSpec extends FlatSpec with SchedulerBehaviors {
 

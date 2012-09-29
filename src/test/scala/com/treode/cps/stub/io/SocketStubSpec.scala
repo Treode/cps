@@ -13,8 +13,7 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package io
+package com.treode.cps.stub.io
 
 import java.nio.ByteBuffer
 import java.nio.channels._
@@ -22,6 +21,9 @@ import org.scalatest.{FlatSpec, PropSpec, Specs}
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.PropertyChecks
 import scala.util.Random
+import com.treode.cps.{CpsFlatSpec, CpsPropSpec}
+import com.treode.cps.io.{SocketBehaviors, SocketChecks}
+import com.treode.cps.stub.CpsSpecKit
 import com.treode.cps.sync.Future
 
 import Future.start
