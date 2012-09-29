@@ -21,7 +21,7 @@ import org.scalatest.{FlatSpec, PropSpec, Specs}
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.PropertyChecks
 import scala.util.Random
-import com.treode.cps.{CpsFlatSpec, CpsPropSpec}
+import com.treode.cps.scalatest.{CpsFlatSpec, CpsPropSpec}
 import com.treode.cps.io.{SocketBehaviors, SocketChecks}
 import com.treode.cps.stub.CpsSpecKit
 import com.treode.cps.sync.Future

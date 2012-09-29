@@ -13,14 +13,12 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package io
+package com.treode.cps.io
 
 import java.net.{SocketAddress, InetSocketAddress}
 import java.nio.channels.{AsynchronousChannelGroup => JGroup}
 import java.util.concurrent.ThreadFactory
-import org.scalatest.FlatSpec
-import org.scalatest.junit.JUnitRunner
+import com.treode.cps.scalatest.CpsFlatSpec
 import com.treode.cps.stub.CpsSpecKit
 
 class SocketLiveSpec extends CpsFlatSpec with SocketBehaviors {

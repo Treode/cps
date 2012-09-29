@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package io
+package com.treode.cps.io
 
 import java.nio.file.{OpenOption, Path}
 import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
+import com.treode.cps.scalatest.CpsFlatSpec
 import com.treode.cps.stub.CpsSpecKit
 
 class FileLiveSpec extends CpsFlatSpec with FileBehaviors {

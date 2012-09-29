@@ -13,8 +13,7 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package sync
+package com.treode.cps.sync
 
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ConcurrentHashMap
@@ -24,7 +23,7 @@ import org.scalatest.PropSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.matchers.ShouldMatchers
-import com.treode.cps.CpsPropSpec
+import com.treode.cps.scalatest.CpsPropSpec
 import com.treode.cps.stub.CpsSpecKit
 
 class MailboxSpec extends CpsPropSpec {

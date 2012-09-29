@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package io
+package com.treode.cps.io
 
 import java.nio.ByteBuffer
 import java.nio.channels._
 import org.scalatest.FlatSpec
+import com.treode.cps.scalatest.CpsFlatSpec
 import com.treode.cps.sync.Future.start
 
 trait FileBehaviors extends FileChecks {

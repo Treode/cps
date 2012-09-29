@@ -15,12 +15,10 @@
 
 package com.treode.cps.sync
 
-import org.scalatest.{FlatSpec, PropSpec, Specs}
-import org.scalatest.junit.JUnitRunner
+import org.scalatest.Specs
 import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.prop.PropertyChecks
 import scala.collection.mutable
-import com.treode.cps.{CpsFlatSpec, CpsPropSpec}
+import com.treode.cps.scalatest.{CpsFlatSpec, CpsPropSpec}
 import com.treode.cps.stub.CpsSpecKit
 
 import Future.{delay, start}

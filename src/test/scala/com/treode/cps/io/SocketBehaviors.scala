@@ -13,15 +13,14 @@
  * limitations under the License.
  */
 
-package com.treode.cps
-package io
+package com.treode.cps.io
 
 import java.net.SocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels._
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
-import org.scalatest.FlatSpec
+import com.treode.cps.scalatest.CpsFlatSpec
 import com.treode.cps.scheduler.Scheduler
 import com.treode.cps.sync.Future.start
 

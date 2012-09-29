@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.treode.cps
+package com.treode.cps.scalatest
 
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions._
@@ -23,6 +23,7 @@ import org.scalacheck.Gen
 import org.scalatest.{Assertions, FlatSpec, PropSpec}
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.verb.ResultOfStringPassedToVerb
+import com.treode.cps.{shift, thunk}
 import com.treode.cps.stub.CpsSpecKit
 
 trait CpsSpecTools extends Assertions {

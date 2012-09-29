@@ -20,7 +20,7 @@ import scala.util.Random
 import org.scalatest.PropSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.PropertyChecks
-import com.treode.cps.CpsPropSpec
+import com.treode.cps.scalatest.CpsPropSpec
 import com.treode.cps.stub.CpsSpecKit
 
 class RandomSpec extends CpsPropSpec with SchedulerProperties {
