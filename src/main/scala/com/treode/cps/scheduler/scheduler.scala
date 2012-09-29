@@ -129,10 +129,10 @@ trait SchedulerConfig {
   def handleUncaughtException (e: Throwable): Unit
 
   /** A thump is the runnable that we hand to the [[com.treode.cps.scheduler.TaskQueue]].  A
-    * [[com.treode.cps.scheduler.SchedulerConfig#makeSafeThump safe thump]] ensures that the task runs at
-    * most once, and may help finding problems in a TaskQueue implementation, however it incurs
+    * [[com.treode.cps.scheduler.SchedulerConfig#makeSafeThump]] ensures that the task runs at most
+    * once, and may help finding problems in a TaskQueue implementation, however it incurs
     * synchronization overhead.  A
-    * [[com.treode.cps.scheduler.SchedulerConfig#makeFastThump fast thump]] avoids that cost but does not
+    * [[com.treode.cps.scheduler.SchedulerConfig#makeFastThump]] avoids that cost but does not
     * detect multiple runs.
     */
   def makeThump (s: Scheduler, k: () => Any): Runnable
@@ -143,11 +143,11 @@ trait SchedulerConfig {
     * In fact, the CPS plugin works by rewriting the code from a traditional style to a callback
     * style.
     *
-    * A [[com.treode.cps.scheduler.SchedulerConfig#makeSafeThunk safe thunk]] ensures that the
-    * continuation is resumed (either with a value or with an exception) at most once, and it may
-    * help finding bugs in your code, however it incurs synchronization overhead.
-    * A [[com.treode.cps.scheduler.SchedulerConfig#makeFastThunk fast thunk]] avoids that cost but does
-    * not detect multiple resumptions.
+    * A [[com.treode.cps.scheduler.SchedulerConfig#makeSafeThunk]] ensures that the continuation
+    * is resumed (either with a value or with an exception) at most once, and it may help finding
+    * bugs in your code, however it incurs synchronization overhead.  A
+    * [[com.treode.cps.scheduler.SchedulerConfig#makeFastThunk]] avoids that cost but does not
+    * detect multiple resumptions.
     */
   def makeThunk [A] (s: Scheduler, k: Either [Throwable, A] => Any): Thunk [A]
 }
