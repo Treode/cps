@@ -35,7 +35,7 @@ object CpsBuild extends Build {
   Seq (
     organization := "com.treode",
     name := "cps",
-    version := "0.1",
+    version := "0.1.0",
     scalaVersion := "2.9.2",
 
     addCompilerPlugin ("org.scala-lang.plugins" % "continuations" % "2.9.2"),
@@ -45,41 +45,19 @@ object CpsBuild extends Build {
       "org.scalatest" %% "scalatest" % "2.0.M4" % "scalatest;test",
       "org.scalacheck" %% "scalacheck" % "1.9" % "scalatest;test"),
 
-    publishMavenStyle := true,
-    pomIncludeRepository := { x => false },
-
     publishArtifact in Stub := true,
     publishArtifact in ScalaTest := true,
     publishArtifact in Test := false,
+    publishMavenStyle := false,
 
-    pomExtra := (
-      <url>https://github.com/Treode/cps</url>
-      <licenses>
-        <license>
-          <name>The Apache Software License, Version 2.0</name>
-          <url>http://www.apache.org/licenses/LICENSE-2.0</url>
-          <distribution>repo</distribution>
-        </license>
-      </licenses>
-      <scm>
-        <url>https://github.com/Treode/cps</url>
-        <connection>scm:git:git@github.com:Treode/cps.git</connection>
-      </scm>
-      <developers>
-        <developer>
-          <id>topher</id>
-          <name>Topher</name>
-          <url>https://github.com/Topher-the-Geek</url>
-        </developer>
-      </developers>
-    ),
-
-    publishTo <<= version { v: String =>
-      val nexus = "https://oss.sonatype.org/"
-      if (v.trim.endsWith ("SNAPSHOT"))
-        Some("snapshots" at nexus + "content/repositories/snapshots")
-      else
-        Some("releases" at nexus + "service/local/staging/deploy/maven2")
+    publishTo <<= (version) { version: String =>
+      val treode = "http://treode.artifactoryonline.com/treode/"
+      val (name, url) =
+        if (version.contains ("-SNAPSHOT"))
+          ("oss-snapshots", treode + "oss-snapshots")
+        else
+          ("oss-releases", treode + "oss-releases")
+      Some (Resolver.url (name, new URL (url)) (Resolver.ivyStylePatterns))
     })
 
   lazy val root = Project ("root", file ("."))
