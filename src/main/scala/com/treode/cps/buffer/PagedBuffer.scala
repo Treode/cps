@@ -99,25 +99,40 @@ private final class PagedBuffer private [buffer] (
   }
 
   def readableByteBuffers: Array [ByteBuffer] = {
-    val m = pageOf (_readAt)
-    val n = pageOf (_writeAt)
-    val bs = new Array [ByteBuffer] (n - m + 1)
-    for (i <- m to n)
-      bs (i-m) = ByteBuffer.wrap (pages (i))
-    bs (0) .position (pageIndexOf (_readAt))
-    bs (n-m) .limit (pageIndexOf (_writeAt))
-    bs
-  }
+    if (_writeAt == _readAt) {
+      val m = pageOf (_readAt)
+      if (m >= pages.length) {
+        new Array [ByteBuffer] (0)
+      } else {
+        val bs = new Array [ByteBuffer] (1)
+        bs (0) = ByteBuffer.wrap (pages (m))
+        bs (0) .position (pageIndexOf (_readAt))
+        bs (0) .limit (pageIndexOf (_readAt))
+        bs
+      }
+    } else {
+      val m = pageOf (_readAt)
+      val n = pageOf (_writeAt-1)
+      val bs = new Array [ByteBuffer] (n - m + 1)
+      for (i <- m to n)
+        bs (i-m) = ByteBuffer.wrap (pages (i))
+      bs (0) .position (pageIndexOf (_readAt))
+      bs (n-m) .limit (pageIndexOf (_writeAt-1) + 1)
+      bs
+    }}
 
   def writableByteBuffers: Array [ByteBuffer] = {
     val m = pageOf (_writeAt)
-    val n = pages.length - 1
-    val bs = new Array [ByteBuffer] (n - m + 1)
-    for (i <- m to n)
-      bs (i-m) = ByteBuffer.wrap (pages (i))
-    bs (0) .position (pageIndexOf (_writeAt))
-    bs
-  }
+    if (m >= pages.length) {
+      new Array [ByteBuffer] (0)
+    } else {
+      val n = pages.length - 1
+      val bs = new Array [ByteBuffer] (n - m + 1)
+      for (i <- m to n)
+        bs (i-m) = ByteBuffer.wrap (pages (i))
+      bs (0) .position (pageIndexOf (_writeAt))
+      bs
+    }}
 
   def findByte (start: Int, end: Int, byte: Byte): Int = {
     // In a simple microbenchmark, this was about 30% slower than Netty's HeapBuffer.indexOf.  This

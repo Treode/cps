@@ -223,6 +223,7 @@ class PagedBufferSpec extends FlatSpec {
   }
 
   it should "provide readable ByteBuffers" in {
+
     def checkBuffers (discard: Int, readAt: Int, writeAt: Int, pos: Int, limit: Int, len: Int) {
       val b = PagedBuffer ()
       b.capacity (writeAt)
@@ -230,41 +231,93 @@ class PagedBufferSpec extends FlatSpec {
       b.readAt = readAt
       b.discard (discard)
       val bs = b.readableByteBuffers
-      expectResult (pos) (bs (0) .position)
+      expectResult (len) (bs.length)
+      if (bs.length > 0) {
+        expectResult (pos) (bs (0) .position)
+        expectResult (limit) (bs (bs.length-1) .limit)
+      }
       if (bs.length > 1) {
         expectResult (pageSize) (bs (0) .limit)
         expectResult (0) (bs (bs.length-1) .position)
-      }
-      expectResult (limit) (bs (bs.length-1) .limit)
-      expectResult (len) (bs.length)
-    }
+      }}
 
+    checkBuffers (0, 0, 0, 0, 0, 1)
+    checkBuffers (0, 0, 7890, 0, 7890, 1)
+    checkBuffers (0, 0, pageSize, 0, pageSize, 1)
     checkBuffers (0, 1234, 7890, 1234, 7890, 1)
-    checkBuffers (0, 1234, pageSize+7890, 1234, 7890, 2)
-    checkBuffers (0, 1234, pageSize*2+7890, 1234, 7890, 3)
+    checkBuffers (0, 1234, pageSize, 1234, pageSize, 1)
+    checkBuffers (0, 7890, 7890, 7890, 7890, 1)
+    checkBuffers (0, pageSize, pageSize, -1, -1, 0)
+
+    checkBuffers (123, 123, 123, 123, 123, 1)
+    checkBuffers (123, 123, 7890, 123, 7890, 1)
+    checkBuffers (123, 123, pageSize, 123, pageSize, 1)
     checkBuffers (123, 1234, 7890, 1234, 7890, 1)
-    checkBuffers (123, 1234, pageSize+7890, 1234, 7890, 2)
-    checkBuffers (1234, 1234, 7890, 1234, 7890, 1)
-    checkBuffers (1234, 1234, pageSize+7890, 1234, 7890, 2)
+    checkBuffers (123, 1234, pageSize, 1234, pageSize, 1)
+    checkBuffers (123, 7890, 7890, 7890, 7890, 1)
+    checkBuffers (123, pageSize, pageSize, -1, -1, 0)
+
+    checkBuffers (0, 0, pageSize+7890, 0, 7890, 2)
+    checkBuffers (0, 0, pageSize*2, 0, pageSize, 2)
+    checkBuffers (0, 1234, pageSize+7890, 1234, 7890, 2)
+    checkBuffers (0, 1234, pageSize*2, 1234, pageSize, 2)
+    checkBuffers (0, pageSize+7890, pageSize+7890, 7890, 7890, 1)
+    checkBuffers (0, pageSize*2, pageSize*2, -1, -1, 0)
+
+    checkBuffers (0, pageSize, pageSize+7890, 0, 7890, 1)
+    checkBuffers (0, pageSize, pageSize*2, 0, pageSize, 1)
+    checkBuffers (0, pageSize+1234, pageSize+7890, 1234, 7890, 1)
+    checkBuffers (0, pageSize+1234, pageSize*2, 1234, pageSize, 1)
+
+    checkBuffers (pageSize, pageSize, pageSize+7890, 0, 7890, 1)
+    checkBuffers (pageSize, pageSize, pageSize*2, 0, pageSize, 1)
+    checkBuffers (pageSize, pageSize+1234, pageSize+7890, 1234, 7890, 1)
+    checkBuffers (pageSize, pageSize+1234, pageSize*2, 1234, pageSize, 1)
   }
 
   it should "provide writable ByteBuffers" in {
-    def checkBuffers (discard: Int, writeAt: Int, pos: Int, limit: Int, len: Int) {
+    def checkBuffers (discard: Int, writeAt: Int, capacity: Int, pos: Int, limit: Int, len: Int) {
       val b = PagedBuffer ()
-      b.capacity (writeAt)
+      b.capacity (capacity)
       b.writeAt = writeAt
       b.readAt = discard
       b.discard (discard)
       val bs = b.writableByteBuffers
-      expectResult (pos) (bs (0) .position)
+      expectResult (len) (bs.length)
+      if (bs.length > 0) {
+        expectResult (pos) (bs (0) .position)
+        expectResult (limit) (bs (bs.length-1) .limit)
+      }
       if (bs.length > 1) {
         expectResult (pageSize) (bs (0) .limit)
         expectResult (0) (bs (bs.length-1) .position)
-      }
-      expectResult (limit) (bs (bs.length-1) .limit)
-      expectResult (len) (bs.length)
-    }
+      }}
 
-    checkBuffers (0, 1234, 1234, 8192, 1)
-    checkBuffers (123, 1234, 1234, 8192, 1)
+    checkBuffers (0, 0, 0, 0, pageSize, 1)
+    checkBuffers (0, 0, 7890, 0, pageSize, 1)
+    checkBuffers (0, 0, pageSize, 0, pageSize, 1)
+    checkBuffers (0, 1234, 7890, 1234, pageSize, 1)
+    checkBuffers (0, 1234, pageSize, 1234, pageSize, 1)
+    checkBuffers (0, 7890, 7890, 7890, pageSize, 1)
+    checkBuffers (0, pageSize, pageSize, -1, -1, 0)
+
+    checkBuffers (123, 123, 123, 123, pageSize, 1)
+    checkBuffers (123, 123, 7890, 123, pageSize, 1)
+    checkBuffers (123, 123, pageSize, 123, pageSize, 1)
+    checkBuffers (123, 1234, 7890, 1234, pageSize, 1)
+    checkBuffers (123, 1234, pageSize, 1234, pageSize, 1)
+    checkBuffers (123, 7890, 7890, 7890, pageSize, 1)
+    checkBuffers (123, pageSize, pageSize, -1, -1, 0)
+
+    checkBuffers (0, 0, pageSize+7890, 0, pageSize, 2)
+    checkBuffers (0, 0, pageSize*2, 0, pageSize, 2)
+    checkBuffers (0, 1234, pageSize+7890, 1234, pageSize, 2)
+    checkBuffers (0, 1234, pageSize*2, 1234, pageSize, 2)
+    checkBuffers (0, pageSize+7890, pageSize+7890, 7890, pageSize, 1)
+    checkBuffers (0, pageSize*2, pageSize*2, -1, -1, 0)
+
+    checkBuffers (pageSize, pageSize, pageSize+7890, 0, pageSize, 1)
+    checkBuffers (pageSize, pageSize, pageSize*2, 0, pageSize, 1)
+    checkBuffers (pageSize, pageSize+1234, pageSize+7890, 1234, pageSize, 1)
+    checkBuffers (pageSize, pageSize+1234, pageSize*2, 1234, pageSize, 1)
   }}
