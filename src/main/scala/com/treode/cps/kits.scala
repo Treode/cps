@@ -23,9 +23,9 @@ import com.treode.cps.scheduler.{Scheduler, SchedulerConfig}
 trait CpsKit {
 
   // Making the scheduler a val allows the user to import scheduler._; however it also makes
-  // initializing the kit tricky.  To resolve this, wew write classes that fill in these
+  // initializing the kit tricky.  To resolve this, we write classes that fill in these
   // dependencies, and those classes have constructors that take configuration parameters.
-  val scheduler: Scheduler
+  implicit val scheduler: Scheduler
 
   /** Shutdown the scheduler and sockets, and then exit the JVM. */
   def shutdown()
@@ -50,7 +50,7 @@ class CpsLiveKit (config: CpsLiveConfig) extends CpsKit {
 
   private val timer = new ScheduledThreadPoolExecutor (1)
 
-  val scheduler = Scheduler (new SchedulerConfig {
+  implicit val scheduler = Scheduler (new SchedulerConfig {
 
     val executor = CpsLiveKit.this.executor
 
@@ -77,10 +77,10 @@ trait CpsLiveSocketKit extends CpsKit with CpsSocketKit {
     def newThread (r: Runnable) = new Thread (r, "Channels")
   }
 
-  private val group = JGroup.withFixedThreadPool (1, threads)
+  private implicit val group = JGroup.withFixedThreadPool (1, threads)
 
-  def newServerSocket = ServerSocketLive (scheduler, group)
-  def newSocket = SocketLive (scheduler, group)
+  def newServerSocket = ServerSocketLive ()
+  def newSocket = SocketLive ()
 
   override abstract def shutdown() {
     group.shutdownNow()

@@ -31,11 +31,8 @@ trait SecureServerSocket extends ServerSocket {
   def accept (): SecureSocket @thunk
 }
 
-private class SecureSocketLive (
-    scheduler: Scheduler,
-    socket: Socket,
-    engine: SSLEngine)
-extends SecureSocket {
+private class SecureSocketLive (socket: Socket, engine: SSLEngine) (
+    implicit scheduler: Scheduler) extends SecureSocket {
 
   private [this] val empty = ByteBuffer.allocate (0)
 
@@ -43,8 +40,8 @@ extends SecureSocket {
   private [this] var netOut = ByteBuffer.allocate (engine.getSession.getPacketBufferSize)
   private [this] var appIn = empty
 
-  private [this] val inLock = Lock (scheduler)
-  private [this] val outLock = Lock (scheduler)
+  private [this] val inLock = Lock ()
+  private [this] val outLock = Lock ()
 
   /** Grow the buffer if necessary. */
   private [this] def grow (b0: ByteBuffer, n: Int): ByteBuffer = {
@@ -237,13 +234,15 @@ extends SecureSocket {
 
 object SecureSocket {
 
-  def apply (scheduler: Scheduler, channel: Socket, context: SSLContext, client: Boolean): SecureSocket = {
+  def apply (channel: Socket, context: SSLContext, client: Boolean) (
+      implicit scheduler: Scheduler): SecureSocket = {
     val engine = context.createSSLEngine
     engine.setUseClientMode (client)
-    new SecureSocketLive (scheduler, channel, engine)
+    new SecureSocketLive (channel, engine)
   }}
 
-private class SecureServerSocketLive (scheduler: Scheduler, socket: ServerSocket, context: SSLContext)
+private class SecureServerSocketLive (
+    socket: ServerSocket, context: SSLContext) (implicit scheduler: Scheduler)
 extends SecureServerSocket {
 
   def close() = socket.close()
@@ -263,7 +262,7 @@ extends SecureServerSocket {
 
   def accept (): SecureSocket @thunk = {
     val client = socket.accept()
-    SecureSocket (scheduler, client, context, false)
+    SecureSocket (client, context, false)
   }
 
   def bind (local: SocketAddress, backlog: Int = 0) = {
@@ -273,6 +272,7 @@ extends SecureServerSocket {
 
 object SecureServerSocket {
 
-  def apply (scheduler: Scheduler, channel: ServerSocket, context: SSLContext): SecureServerSocket =
-    new SecureServerSocketLive (scheduler, channel, context)
+  def apply (channel: ServerSocket, context: SSLContext) (
+      implicit scheduler: Scheduler): SecureServerSocket =
+    new SecureServerSocketLive (channel, context)
 }

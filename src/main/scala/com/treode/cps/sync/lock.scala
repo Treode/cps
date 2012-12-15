@@ -126,5 +126,5 @@ extends AtomicState with Lock {
 
 object Lock {
 
-  def apply (s: Scheduler): Lock = new LockImpl (s)
+  def apply () (implicit s: Scheduler): Lock = new LockImpl (s)
 }

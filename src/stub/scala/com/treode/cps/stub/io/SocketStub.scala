@@ -24,17 +24,17 @@ import com.treode.cps.io.Socket
 import com.treode.cps.scheduler.Scheduler
 import com.treode.cps.sync.Mailbox
 
-class SocketAddressStub (random: Random, scheduler: Scheduler) extends SocketAddress {
+class SocketAddressStub (implicit random: Random, scheduler: Scheduler) extends SocketAddress {
 
-  private [this] val mb = Mailbox [SocketStub] (scheduler)
+  private [this] val mb = Mailbox [SocketStub] ()
 
   private [io] def accept () = {
     val otherSocket = mb.receive ()
-    val otherAddress = new SocketAddressStub (random, scheduler)
+    val otherAddress = new SocketAddressStub ()
     val s1 = new Simplex (random, scheduler)
     val s2 = new Simplex (random, scheduler)
     otherSocket.connected (otherAddress, this, s1, s2)
-    val thisSocket = new SocketStub (scheduler)
+    val thisSocket = new SocketStub ()
     thisSocket.connected (this, otherAddress, s2, s1)
     thisSocket
   }
@@ -50,14 +50,18 @@ object SocketAddressStub {
   /** Create a new stub socket address which links a client to a server in process and does not
     * invole any OS networking.
     *
+    * @param r The random number generator used to determine how many bytes are read or written
+    *     by one call to and variant of read or write.
     * @param s The scheduler for continuing execution when data is received.  These stub sockets
     *     are not multithread safe, so the scheduler must be single threaded, such as with
     *     CpsSpecKit.Sequential or RandomKit.
     */
-  def apply (r: Random, s: Scheduler): SocketAddress = new SocketAddressStub (r, s)
+  def apply () (implicit r: Random, s: Scheduler): SocketAddress =
+    new SocketAddressStub ()
 }
 
-class SocketStub (protected val scheduler: Scheduler) extends AbstractSocketStub with Socket {
+class SocketStub (protected implicit val scheduler: Scheduler)
+extends AbstractSocketStub with Socket {
 
   initialize (Unconnected)
 
@@ -167,5 +171,5 @@ object SocketStub {
     *     are not multithread safe, so the scheduler must be single threaded, such as with
     *     CpsSpecKit.Sequential or RandomKit.
     */
-  def apply (s: Scheduler): Socket = new SocketStub (s: Scheduler)
+  def apply () (implicit s: Scheduler): Socket = new SocketStub ()
 }

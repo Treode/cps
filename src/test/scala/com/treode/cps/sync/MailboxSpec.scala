@@ -36,7 +36,7 @@ class MailboxSpec extends CpsPropSpec {
 
       val n = 12
       val log = mutable.Set [Int] ()
-      val mailbox = Mailbox [Int] (scheduler)
+      val mailbox = Mailbox [Int] ()
       for (i <- 1 to n) {
         spawn {
           mailbox.send (2*i - 1)
@@ -58,7 +58,7 @@ class MailboxSpec extends CpsPropSpec {
     import kit.scheduler.spawn
 
     val log = new ConcurrentHashMap [Int, String] ()
-    val mailbox = Mailbox [Int] (scheduler)
+    val mailbox = Mailbox [Int] ()
     for (i <- 1 to n) {
       spawn {
         mailbox.send (2*i - 1)

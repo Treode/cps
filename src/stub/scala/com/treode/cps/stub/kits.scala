@@ -25,8 +25,6 @@ import com.treode.cps.stub.scheduler.ExecutorStub
 
 trait CpsSpecKit extends CpsKit {
 
-  val scheduler: Scheduler
-
   /** Run until no more tasks, new ones may be enqueued while running.  May be called multiple
      * times.
      */
@@ -41,15 +39,17 @@ object CpsSpecKit {
   /** Run multiple tasks simultaneously in parallel threads. */
   class Multithreaded (cond: => Boolean) extends CpsSpecKit {
 
-    private [this] val exception = new AtomicReference (None: Option [Throwable])
-
-    val config = new SchedulerConfig {
-
-      val executor = new ForkJoinPool (
+    private val executor = new ForkJoinPool (
           Runtime.getRuntime ().availableProcessors (),
           ForkJoinPool.defaultForkJoinWorkerThreadFactory,
           null,
           true)
+
+    private [this] val exception = new AtomicReference (None: Option [Throwable])
+
+    val config = new SchedulerConfig {
+
+      val executor = Multithreaded.this.executor
 
       val timer = new ScheduledThreadPoolExecutor (1)
 
@@ -62,7 +62,7 @@ object CpsSpecKit {
         SchedulerConfig.makeSafeThunk (s, k)
     }
 
-    val scheduler = Scheduler (config)
+    implicit val scheduler = Scheduler (config)
 
     private def runToException (cond: => Boolean) {
       Thread.sleep (100)
@@ -108,7 +108,7 @@ object CpsSpecKit {
         SchedulerConfig.makeSafeThunk (s, k)
     }
 
-    val scheduler = Scheduler (config)
+    implicit val scheduler = Scheduler (config)
 
     private def runToException (cond: => Boolean) {
       while (exception == None && (cond || !config.executor.isQuiet))
@@ -130,9 +130,11 @@ object CpsSpecKit {
 
     private [this] var exception = None: Option [Throwable]
 
+    implicit val random = r
+
     val config = new SchedulerConfig {
 
-      val timer = ExecutorStub.newRandomExecutor (r)
+      val timer = ExecutorStub.newRandomExecutor (random)
       val executor = timer
 
       def handleUncaughtException (e: Throwable)  =  exception = Some (e)
@@ -144,7 +146,7 @@ object CpsSpecKit {
         SchedulerConfig.makeSafeThunk (s, k)
     }
 
-    val scheduler = Scheduler (config)
+    implicit val scheduler = Scheduler (config)
 
     private def runToException (cond: => Boolean) {
       while (exception == None && (cond || !config.executor.isQuiet))
@@ -166,6 +168,6 @@ object CpsSpecKit {
 trait CpsStubSocketKit extends CpsSocketKit {
   this: CpsKit =>
 
-  def newSocket = SocketStub (scheduler)
-  def newServerSocket = ServerSocketStub (scheduler)
+  def newSocket = SocketStub ()
+  def newServerSocket = ServerSocketStub ()
 }

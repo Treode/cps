@@ -32,15 +32,13 @@ class SocketStubSpec extends Specs (SocketStubBehaviors, SocketStubProperties)
 
 private object SocketStubBehaviors extends CpsFlatSpec with SocketBehaviors {
 
-  class StubSpecKit
-  extends CpsSpecKit.Sequential
-  with SocketSpecKit {
+  class StubSpecKit extends CpsSpecKit.Sequential with SocketSpecKit {
     import scheduler.spawn
-    val random = new scala.util.Random (0)
+    implicit val random = new scala.util.Random (0)
     def run (cond: => Boolean) = run ()
-    def newServerAddress () = SocketAddressStub (random, scheduler)
-    def newSocket() = new SocketStub (scheduler)
-    def newServerSocket() = new ServerSocketStub (scheduler)
+    def newServerAddress() = SocketAddressStub ()
+    def newSocket() = new SocketStub ()
+    def newServerSocket() = new ServerSocketStub ()
   }
 
   "A server socket stub" should behave like aServerSocket (() => new StubSpecKit)
@@ -58,12 +56,12 @@ private object SocketStubBehaviors extends CpsFlatSpec with SocketBehaviors {
     val address = server.localAddress.get
     spawn {
       val s = newSocket
-      val thrown1 = start (scheduler) {
+      val thrown1 = start {
         val thrown = interceptCps [Exception] (s.connect (address))
         s.close ()
         thrown
       }
-      val thrown2 = start (scheduler) {
+      val thrown2 = start {
         val thrown = interceptCps [Exception] (s.connect (address))
         s.close ()
         thrown
@@ -122,11 +120,10 @@ private object SocketStubProperties extends CpsPropSpec with SocketChecks {
   class StubSpecKit (r: Random)
   extends CpsSpecKit.RandomKit (r)
   with SocketSpecKit {
-    val random = r
     def run (cond: => Boolean) = run ()
-    def newServerAddress () = SocketAddressStub (random, scheduler)
-    def newSocket() = new SocketStub (scheduler)
-    def newServerSocket() = new ServerSocketStub (scheduler)
+    def newServerAddress() = SocketAddressStub ()
+    def newSocket() = new SocketStub ()
+    def newServerSocket() = new ServerSocketStub ()
   }
 
   property ("SocketStubs open, connect, send and receive") {

@@ -113,7 +113,7 @@ object SocketLive {
     *     of this implementation pass the event from the OS to the CPS scheduler, so the scheduler
     *     provided to the socket group can be simple.
     */
-  def apply (s: Scheduler, g: JGroup): Socket =
+  def apply () (implicit s: Scheduler, g: JGroup): Socket =
     new SocketLive (s, JSocket.open (g))
 }
 
@@ -145,6 +145,6 @@ object ServerSocketLive {
     *     of this implementation pass the event from the OS to the CPS scheduler, so the scheduler
     *     provided to the socket group can be simple.
     */
-  def apply (s: Scheduler, g: JGroup): ServerSocket =
+  def apply () (implicit s: Scheduler, g: JGroup): ServerSocket =
     new ServerSocketLive (s, g)
 }

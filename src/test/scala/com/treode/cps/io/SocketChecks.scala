@@ -32,7 +32,7 @@ trait SocketChecks {
 
   trait SocketSpecKit {
 
-    val scheduler: Scheduler
+    implicit val scheduler: Scheduler
     import scheduler.spawn
 
     /** Run until the system is quiet and the condition is false. */
@@ -111,13 +111,13 @@ trait SocketChecks {
         val other = server.accept ()
         server.close ()
 
-        val r = start (scheduler) {
+        val r = start {
           readStr (other, "Hello Server")
           readStr (other, speech)
           assert (log.add ("server read"))
         }
 
-        val w = start (scheduler) {
+        val w = start {
           writeStr (other, "Hello Client")
           writeStr (other, insight)
           assert (log.add ("server write"))
@@ -133,13 +133,13 @@ trait SocketChecks {
         val client = newSocket ()
         client.connect (server.localAddress.get)
 
-        val r = start (scheduler) {
+        val r = start {
           readStr (client, "Hello Client")
           readStr (client, insight)
           assert (log.add ("client read"))
         }
 
-        val w = start (scheduler) {
+        val w = start {
           writeStr (client, "Hello Server")
           writeStr (client, speech)
           assert (log.add ("client write"))

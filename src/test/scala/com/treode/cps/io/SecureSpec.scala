@@ -50,11 +50,11 @@ class SecureSpec extends PropSpec with PropertyChecks with SocketChecks {
   val context = SSLContext.getInstance ("TLS")
   context.init (kmf.getKeyManagers (), tmf.getTrustManagers (), null)
 
-  class SecureSpecKit (random: Random) extends CpsSpecKit.RandomKit (random) with SocketSpecKit {
+  class SecureSpecKit (r: Random) extends CpsSpecKit.RandomKit (r) with SocketSpecKit {
     def run (cond: => Boolean) = run()
-    def newServerAddress () = SocketAddressStub (random, scheduler)
-    def newSocket() = SecureSocket (scheduler, new SocketStub (scheduler), context, true)
-    def newServerSocket() = SecureServerSocket (scheduler, new ServerSocketStub (scheduler), context)
+    def newServerAddress() = SocketAddressStub ()
+    def newSocket() = SecureSocket (new SocketStub(), context, true)
+    def newServerSocket() = SecureServerSocket (new ServerSocketStub(), context)
   }
 
   property ("SecureChannels can open, connect, send and receive") {

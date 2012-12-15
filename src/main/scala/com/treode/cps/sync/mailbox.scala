@@ -270,5 +270,5 @@ object Mailbox {
     *
     * @param s The scheduler to suspend receivers and spawn loopers.
     */
-  def apply [A] (s: Scheduler): Mailbox [A] = new MailboxImpl (s)
+  def apply [A] () (implicit s: Scheduler): Mailbox [A] = new MailboxImpl (s)
 }

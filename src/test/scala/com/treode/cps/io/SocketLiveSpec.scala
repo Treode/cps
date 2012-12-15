@@ -29,11 +29,11 @@ class SocketLiveSpec extends CpsFlatSpec with SocketBehaviors {
       def newThread (r: Runnable) = new Thread (r, "Channels")
     }
 
-    private [this] val group = JGroup.withFixedThreadPool (1, threads)
+    private [this] implicit val group = JGroup.withFixedThreadPool (1, threads)
 
     def newServerAddress () = new InetSocketAddress (0)
-    def newSocket(): Socket = SocketLive (scheduler, group)
-    def newServerSocket(): ServerSocket = ServerSocketLive (scheduler, group)
+    def newSocket(): Socket = SocketLive ()
+    def newServerSocket(): ServerSocket = ServerSocketLive ()
   }
 
   "A live server socket" should behave like aServerSocket (() => new LiveSpecKit)

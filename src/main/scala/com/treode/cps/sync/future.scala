@@ -34,7 +34,7 @@ trait Future [+A] {
 
 /** The computation has not run. */
 private class Promise [A] (
-  protected [this] val scheduler: Scheduler
+  protected [this] implicit val scheduler: Scheduler
 ) extends Future [A] with AtomicState {
 
   protected [this] trait State {
@@ -123,8 +123,8 @@ private class Promise [A] (
     */
   def get: A @thunk = delegateT (_.get)
 
-  def map [B] (f: A => B): Future [B] = Future.start (scheduler) (f (get))
-  def flatMap [B] (f: A => Future [B]) = Future.start (scheduler) (f (get).get)
+  def map [B] (f: A => B): Future [B] = Future.start (f (get))
+  def flatMap [B] (f: A => Future [B]) = Future.start (f (get).get)
   def foreach (f: A => Unit): Unit = scheduler.spawn (f (get))
 }
 
@@ -177,11 +177,11 @@ object Future {
   /** Start a computation immediately, and return a Future to obtain its result later.  This may
     * return to the caller before the computation has completed.
     *
-    * @param s The scheduler to suspend fibers waiting on the value.
     * @param f The computation to perform.
+    * @param s The scheduler to suspend fibers waiting on the value.
     */
-  def start [A] (s: Scheduler) (f: => A @thunk): Future [A] =
-    new Promise [A] (s) {
+  def start [A] (f: => A @thunk) (implicit s: Scheduler): Future [A] =
+    new Promise [A] {
       initialize (new Running)
       run (f)
     }
@@ -189,10 +189,10 @@ object Future {
   /** Delay a computation until its result is needed, and return a Future to obtain its result
     * later.
     *
-    * @param s The scheduler to suspend fibers waiting on the value.
     * @param f The computation to perform.
+    * @param s The scheduler to suspend fibers waiting on the value.
     */
-  def delay [A] (s: Scheduler) (f: => A @thunk): Future [A] =
-    new Promise [A] (s) {
+  def delay [A] (f: => A @thunk) (implicit s: Scheduler): Future [A] =
+    new Promise [A] {
       initialize (new Delayed (f))
     }}

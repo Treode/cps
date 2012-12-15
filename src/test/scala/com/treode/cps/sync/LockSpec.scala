@@ -35,7 +35,7 @@ private object LockBehaviors extends CpsFlatSpec {
     import kit.scheduler
     import kit.scheduler.spawn
 
-    val lock = Lock (scheduler)
+    val lock = Lock ()
     spawn {
       interceptCps [DistinguishedException] (lock.exclusive (fatal))
       log ("mark")
@@ -54,7 +54,7 @@ private object LockProperties extends CpsPropSpec {
         import kit.scheduler
         import kit.scheduler.{cede, spawn, suspend}
 
-        val lock = Lock (scheduler)
+        val lock = Lock()
         for (i <- 0 until m) {
           spawn {
             lock.exclusive {
@@ -74,7 +74,7 @@ private object LockProperties extends CpsPropSpec {
       import kit.scheduler
       import kit.scheduler.{cede, spawn, suspend}
 
-      val lock = Lock (scheduler)
+      val lock = Lock ()
       for (i <- 0 until m) {
         spawn {
           lock.exclusive {

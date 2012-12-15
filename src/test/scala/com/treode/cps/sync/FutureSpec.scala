@@ -35,7 +35,7 @@ private object FutureBehaviors extends CpsFlatSpec {
     import kit.scheduler
     import kit.scheduler.spawn
 
-    val x = start [Unit] (scheduler) (fatal)
+    val x = start (fatal)
     spawn {
       interceptCps [DistinguishedException] (x.get)
     }
@@ -51,13 +51,13 @@ private object FutureProperties extends CpsPropSpec with ShouldMatchers {
       import kit.scheduler.{spawn, suspend}
 
       val log = mutable.Set [Int] ()
-      val x1 = start (scheduler) { log.add (1) should be (true); 1 }
-      val x2 = start (scheduler) { log.add (2) should be (true); 2 }
-      val unused = start (scheduler) { log.add (3) should be (true); -1 }
+      val x1 = start { log.add (1) should be (true); 1 }
+      val x2 = start { log.add (2) should be (true); 2 }
+      val unused = start { log.add (3) should be (true); -1 }
       kit.run ()
       log should be (Set (1, 2, 3))
 
-      val x3 = start (scheduler) {
+      val x3 = start {
         log.add (4) should be (true)
         val v1 = x1.get
         log.add (5) should be (true)
@@ -82,13 +82,13 @@ private object FutureProperties extends CpsPropSpec with ShouldMatchers {
       import kit.scheduler.spawn
 
       val log = mutable.Set [Int] ()
-      val x1 = delay (scheduler) { log.add (1) should be (true); 1 }
-      val x2 = delay (scheduler) { log.add (2) should be (true); 2 }
-      val unused = delay (scheduler) { log.add (3) should be (true); -1 }
+      val x1 = delay { log.add (1) should be (true); 1 }
+      val x2 = delay { log.add (2) should be (true); 2 }
+      val unused = delay { log.add (3) should be (true); -1 }
       kit.run ()
       log should be (Set [Int] ())
       spawn {
-        val x3 = start (scheduler) {
+        val x3 = start {
           log.add (4) should be (true)
           val v1 = x1.get
           log.add (5) should be (true)

@@ -92,12 +92,12 @@ trait SocketBehaviors extends SocketChecks {
       spawn {
         val s = newServerSocket ()
         s.bind (newServerAddress ())
-        val thrown1 = start (scheduler) {
+        val thrown1 = start {
           val thrown = interceptCps [Exception] (s.accept ())
           s.close ()
           thrown
         }
-        val thrown2 = start (scheduler) {
+        val thrown2 = start {
           val thrown = interceptCps [Exception] (s.accept ())
           s.close ()
           thrown
@@ -161,12 +161,12 @@ trait SocketBehaviors extends SocketChecks {
       spawn {
         val s = newSocket ()
         s.connect (address)
-        val thrown1 = start (scheduler) {
+        val thrown1 = start {
           val thrown = interceptCps [Exception] (s.read (ByteBuffer.allocate (16)))
           s.close ()
           thrown
         }
-        val thrown2 = start (scheduler) {
+        val thrown2 = start {
           val thrown = interceptCps [Exception] (s.read (ByteBuffer.allocate (16)))
           s.close ()
           thrown

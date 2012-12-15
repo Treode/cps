@@ -22,7 +22,7 @@ import com.treode.cps.Thunk
 import com.treode.cps.io.{ServerSocket, Socket}
 import com.treode.cps.scheduler.Scheduler
 
-class ServerSocketStub (protected val scheduler: Scheduler)
+class ServerSocketStub (protected implicit val scheduler: Scheduler)
 extends AbstractSocketStub with ServerSocket {
   import scheduler.spawn
 
@@ -97,5 +97,5 @@ object ServerSocketStub {
     *     are not multithread safe, so the scheduler must be single threaded, such as with
     *     CpsSpecKit.Sequential or RandomKit.
     */
-  def apply (s: Scheduler): ServerSocket = new ServerSocketStub (s)
+  def apply () (implicit s: Scheduler): ServerSocket = new ServerSocketStub ()
 }
