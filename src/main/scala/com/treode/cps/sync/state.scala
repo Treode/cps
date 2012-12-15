@@ -30,7 +30,7 @@ import com.treode.cps.scheduler.Scheduler
   * and operate in a multithreaded environment can extend this class to manage state transitions
   * safely.
   */
-trait AtomicState {
+private [cps] trait AtomicState {
 
   protected [this] val scheduler: Scheduler
 
