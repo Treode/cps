@@ -33,10 +33,10 @@ private class FileLive (scheduler: Scheduler, file: JFile) extends File {
   def isOpen: Boolean = file.isOpen ()
 
   def read (dst: ByteBuffer, pos: Long): Int @thunk =
-    suspend {t: Thunk [Int] => file.read (dst, pos, null, new IntHandler (t))}
+    suspend [Int] (file.read (dst, pos, _, CompletionHandlers.int))
 
   def write (src: ByteBuffer, pos: Long): Int @thunk =
-    suspend {t: Thunk [Int] => file.write (src, pos, null, new IntHandler (t))}
+    suspend [Int] (file.write (src, pos, _, CompletionHandlers.int))
 }
 
 object FileLive {

@@ -16,6 +16,7 @@
 package com.treode.cps
 package io
 
+import java.lang.{Integer => JInteger, Long => JLong}
 import java.net.{SocketAddress, SocketOption}
 import java.nio.ByteBuffer
 import java.nio.channels.{
@@ -30,28 +31,27 @@ import com.treode.cps.scheduler.Scheduler
 
 import TimeUnit.MILLISECONDS
 
-/** Map between Scala's Unit and Java's Void. */
-private class VoidHandler (t: Thunk [Unit]) extends CompletionHandler [Void, Void] {
-  def completed (result: Void, attachement: Void): Unit = t (result)
-  def failed (thrown: Throwable, attachment: Void): Unit = t.fail (thrown)
-}
+object CompletionHandlers {
 
-/** Map between Scala's Int and Java's Integer. */
-private class IntHandler (t: Thunk [Int]) extends CompletionHandler [java.lang.Integer, Void] {
-  def completed (result: java.lang.Integer, attachement: Void): Unit = t (result)
-  def failed (thrown: Throwable, attachment: Void): Unit = t.fail (thrown)
-}
+  val unit = new CompletionHandler [Void, Thunk [Unit]] {
+    def completed (v: Void, k: Thunk [Unit]) = k()
+    def failed (t: Throwable, k: Thunk [Unit]) = k.fail (t)
+  }
 
-/** Map between Scala's Int and Java's Integer. */
-private class LongHandler (t: Thunk [Long]) extends CompletionHandler [java.lang.Long, Void] {
-  def completed (result: java.lang.Long, attachement: Void): Unit = t (result)
-  def failed (thrown: Throwable, attachment: Void): Unit = t.fail (thrown)
-}
+  val int = new CompletionHandler [JInteger, Thunk [Int]] {
+    def completed (v: JInteger, k: Thunk [Int]) = k (v)
+    def failed (t: Throwable, k: Thunk [Int]) = k.fail (t)
+  }
 
-private class SocketHandler (s: Scheduler, t: Thunk [Socket]) extends CompletionHandler [JSocket, Void] {
-  def completed (result: JSocket, attachement: Void): Unit = t (new SocketLive (s, result))
-  def failed (thrown: Throwable, attachment: Void): Unit = t.fail (thrown)
-}
+  val long = new CompletionHandler [JLong, Thunk [Long]] {
+    def completed (v: JLong, k: Thunk [Long]) = k (v)
+    def failed (t: Throwable, k: Thunk [Long]) = k.fail (t)
+  }
+
+  def socket (s: Scheduler) = new CompletionHandler [JSocket, Thunk [Socket]] {
+    def completed (v: JSocket, k: Thunk [Socket]) = k (new SocketLive (s, v))
+    def failed (t: Throwable, k: Thunk [Socket]) = k.fail (t)
+  }}
 
 private trait AbstractSocketLive extends NetworkChannel {
 
@@ -81,7 +81,7 @@ extends AbstractSocketLive with Socket {
   import scheduler.suspend
 
   def connect (remote: SocketAddress): Unit @thunk =
-    suspend {t: Thunk [Unit] => socket.connect (remote, null, new VoidHandler (t))}
+    suspend [Unit] (socket.connect (remote, _, CompletionHandlers.unit))
 
   def remoteAddress: Option [SocketAddress] = {
     val a = socket.getRemoteAddress ()
@@ -89,16 +89,16 @@ extends AbstractSocketLive with Socket {
   }
 
   def read (dst: ByteBuffer): Int @thunk =
-    suspend {t: Thunk [Int] => socket.read (dst, null, new IntHandler (t))}
+    suspend [Int] (socket.read (dst, _, CompletionHandlers.int))
 
   def read (dst: Array [ByteBuffer]): Long @thunk =
-    suspend {t: Thunk [Long] => socket.read (dst, 0, dst.length, 0, MILLISECONDS, null, new LongHandler (t))}
+    suspend [Long] (socket.read (dst, 0, dst.length, 0, MILLISECONDS, _, CompletionHandlers.long))
 
   def write (src: ByteBuffer): Int @thunk =
-    suspend {t: Thunk [Int] => socket.write (src, null, new IntHandler (t))}
+    suspend [Int] (socket.write (src, _, CompletionHandlers.int))
 
   def write (src: Array [ByteBuffer]): Long @thunk =
-    suspend {t: Thunk [Long] => socket.write (src, 0, src.length, 0, MILLISECONDS, null, new LongHandler (t))}
+    suspend [Long] (socket.write (src, 0, src.length, 0, MILLISECONDS, _, CompletionHandlers.long))
 }
 
 object SocketLive {
@@ -123,10 +123,8 @@ extends AbstractSocketLive with ServerSocket {
 
   protected [this] val socket = JServerSocket.open (group)
 
-  def accept (): Socket @thunk = {
-    suspend { t: Thunk [Socket] =>
-      socket.accept (null, new SocketHandler (scheduler, t))
-    }}
+  def accept (): Socket @thunk =
+    suspend [Socket] (socket.accept (_, CompletionHandlers.socket (scheduler)))
 
   def bind (local: SocketAddress, backlog: Int = 0): this.type = {
     socket.bind (local, backlog)
