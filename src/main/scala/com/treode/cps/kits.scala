@@ -16,7 +16,7 @@
 package com.treode.cps
 
 import java.nio.channels.{AsynchronousChannelGroup => JGroup}
-import java.util.concurrent.{ForkJoinPool, ScheduledThreadPoolExecutor, ThreadFactory}
+import java.util.concurrent.Executors
 import com.treode.cps.io.{ServerSocket, ServerSocketLive, Socket, SocketLive}
 import com.treode.cps.scheduler.{Scheduler, SchedulerConfig}
 
@@ -42,13 +42,9 @@ trait CpsLiveConfig {
 
 class CpsLiveKit (config: CpsLiveConfig) extends CpsKit {
 
-  private val executor = new ForkJoinPool (
-    config.numberOfThreads, // Number of threads
-    ForkJoinPool.defaultForkJoinWorkerThreadFactory,
-    null,
-    true)
+  private val executor = Executors.newCachedThreadPool
 
-  private val timer = new ScheduledThreadPoolExecutor (1)
+  private val timer = Executors.newScheduledThreadPool (1)
 
   implicit val scheduler = Scheduler (new SchedulerConfig {
 
@@ -73,11 +69,7 @@ class CpsLiveKit (config: CpsLiveConfig) extends CpsKit {
 
 trait CpsLiveSocketKit extends CpsKit with CpsSocketKit {
 
-  private val threads = new ThreadFactory {
-    def newThread (r: Runnable) = new Thread (r, "Channels")
-  }
-
-  private implicit val group = JGroup.withFixedThreadPool (1, threads)
+  private implicit val group = JGroup.withFixedThreadPool (1, Executors.defaultThreadFactory)
 
   def newServerSocket = ServerSocketLive ()
   def newSocket = SocketLive ()
