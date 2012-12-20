@@ -24,7 +24,7 @@ import org.scalatest.{Assertions, FlatSpec, PropSpec}
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.verb.ResultOfStringPassedToVerb
 import com.treode.cps.{shift, thunk}
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 trait CpsSpecTools extends Assertions {
 
@@ -53,28 +53,27 @@ trait CpsSpecTools extends Assertions {
 
   def withWrappers (ctx: => Any @thunk): Unit = reset { ctx; () }
 
-  def wrapRun [A] (kit: CpsSpecKit) (k: => A @thunk): A = {
+  def wrapRun [A] (scheduler: TestScheduler) (k: => A @thunk): A = {
     var finished = false
     var v = null .asInstanceOf [A]
-    kit.scheduler.spawn {
+    scheduler.spawn {
       v = k
       expectResult (false, "CPS test ran twice.") (finished)
       finished = true
     }
-    kit.run()
-    expectResult (true, "CPS test did not complete.") (finished)
+    scheduler.run (!finished)
     v
   }
 
-  def withCpsKit [A <: CpsSpecKit] (newKit: => A): A @thunk = {
+  def withScheduler [A <: TestScheduler] (newScheduler: => A): A @thunk = {
     shift [A] { k =>
-      val kit = newKit
+      val scheduler = newScheduler
       try {
-        wrapRun (kit) (k (kit))
-        kit.shutdown()
+        wrapRun (scheduler) (k (scheduler))
+        scheduler.shutdown()
       } catch {
         case exn =>
-          kit.shutdown()
+          scheduler.shutdown()
           throw exn
       }}}
 

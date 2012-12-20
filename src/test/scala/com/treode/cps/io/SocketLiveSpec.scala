@@ -19,11 +19,13 @@ import java.net.{SocketAddress, InetSocketAddress}
 import java.nio.channels.{AsynchronousChannelGroup => JGroup}
 import java.util.concurrent.ThreadFactory
 import com.treode.cps.scalatest.CpsFlatSpec
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 class SocketLiveSpec extends CpsFlatSpec with SocketBehaviors {
 
-  class LiveSpecKit extends CpsSpecKit.Multithreaded (false) with SocketSpecKit {
+  class LiveSpecKit extends SocketSpecKit {
+
+    implicit val scheduler = TestScheduler.multithreaded (false)
 
     private [this] val threads = new ThreadFactory {
       def newThread (r: Runnable) = new Thread (r, "Channels")

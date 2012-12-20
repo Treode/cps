@@ -19,7 +19,7 @@ import org.scalatest.Specs
 import org.scalatest.matchers.ShouldMatchers
 import scala.collection.mutable
 import com.treode.cps.scalatest.{CpsFlatSpec, CpsPropSpec}
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 import Future.{delay, start}
 
@@ -31,30 +31,28 @@ private object FutureBehaviors extends CpsFlatSpec {
   private [this] def fatal: Unit = throw new DistinguishedException
 
   "A Future" should "pass an exception through" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler
-    import kit.scheduler.spawn
+    implicit val scheduler = TestScheduler.sequential ()
+    import scheduler.spawn
 
     val x = start (fatal)
     spawn {
       interceptCps [DistinguishedException] (x.get)
     }
-    kit.run ()
+    scheduler.run ()
   }}
 
 private object FutureProperties extends CpsPropSpec with ShouldMatchers {
 
   property ("An eager future runs every computation once immediately") {
     forAll (seeds) { seed: Long =>
-      val kit = CpsSpecKit.newRandomKit (seed)
-      import kit.scheduler
-      import kit.scheduler.{spawn, suspend}
+      implicit val scheduler = TestScheduler.random (seed)
+      import scheduler.{spawn, suspend}
 
       val log = mutable.Set [Int] ()
       val x1 = start { log.add (1) should be (true); 1 }
       val x2 = start { log.add (2) should be (true); 2 }
       val unused = start { log.add (3) should be (true); -1 }
-      kit.run ()
+      scheduler.run ()
       log should be (Set (1, 2, 3))
 
       val x3 = start {
@@ -71,21 +69,20 @@ private object FutureProperties extends CpsPropSpec with ShouldMatchers {
         log.add (8) should be (true)
         v3 should be (3)
       }
-      kit.run ()
+      scheduler.run ()
       log should be ((1 to 8).toSet)
     }}
 
   property ("A lazy future runs only needed compuations once upon demand") {
     forAll (seeds) { seed: Long =>
-      val kit = CpsSpecKit.newRandomKit (seed)
-      import kit.scheduler
-      import kit.scheduler.spawn
+      implicit val scheduler = TestScheduler.random (seed)
+      import scheduler.spawn
 
       val log = mutable.Set [Int] ()
       val x1 = delay { log.add (1) should be (true); 1 }
       val x2 = delay { log.add (2) should be (true); 2 }
       val unused = delay { log.add (3) should be (true); -1 }
-      kit.run ()
+      scheduler.run ()
       log should be (Set [Int] ())
       spawn {
         val x3 = start {
@@ -101,6 +98,6 @@ private object FutureProperties extends CpsPropSpec with ShouldMatchers {
         log.add (8) should be (true)
         v3 should be (3)
       }
-      kit.run ()
+      scheduler.run ()
       log should be (Set (1, 2, 4, 5, 6, 7, 8))
     }}}

@@ -18,13 +18,12 @@ package io
 
 import java.net.SocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.{
-  AsynchronousCloseException,
-  ShutdownChannelGroupException}
+import java.nio.channels.{AsynchronousCloseException, ShutdownChannelGroupException}
 import java.util.concurrent.atomic.AtomicInteger
 import org.scalatest.Assertions
 import scala.collection.mutable
-import com.treode.cps.scheduler.Scheduler
+import com.treode.cps.stub.scheduler.TestScheduler
+
 import com.treode.cps.sync.Future.start
 
 trait SocketChecks {
@@ -32,11 +31,11 @@ trait SocketChecks {
 
   trait SocketSpecKit {
 
-    implicit val scheduler: Scheduler
+    implicit val scheduler: TestScheduler
     import scheduler.spawn
 
     /** Run until the system is quiet and the condition is false. */
-    def run (cond: => Boolean): Unit
+    def run (cond: => Boolean): Unit = scheduler.run (cond)
 
     /** Make a SockAddress for a server. */
     def newServerAddress (): SocketAddress

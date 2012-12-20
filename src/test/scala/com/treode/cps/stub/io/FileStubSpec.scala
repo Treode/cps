@@ -20,11 +20,13 @@ import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
 import com.treode.cps.scalatest.CpsFlatSpec
 import com.treode.cps.io.{File, FileBehaviors}
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 class FileStubSpec extends CpsFlatSpec with FileBehaviors {
 
-  class StubSpecKit extends CpsSpecKit.Multithreaded (false) with FileSpecKit {
+  class StubSpecKit extends FileSpecKit {
+
+    val scheduler = TestScheduler.multithreaded (false)
 
     val files = FileSystemStub()
 

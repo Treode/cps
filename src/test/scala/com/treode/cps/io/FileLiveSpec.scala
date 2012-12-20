@@ -19,11 +19,14 @@ import java.nio.file.{OpenOption, Path}
 import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
 import com.treode.cps.scalatest.CpsFlatSpec
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 class FileLiveSpec extends CpsFlatSpec with FileBehaviors {
 
-  class LiveSpecKit extends CpsSpecKit.Multithreaded (false) with FileSpecKit {
+  class LiveSpecKit extends FileSpecKit {
+
+    val scheduler = TestScheduler.multithreaded (false)
+
     def openFile (path: Path, opts: OpenOption*): File =
       FileLive.open (scheduler, path, opts: _*)
   }

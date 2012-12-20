@@ -23,7 +23,7 @@ import org.scalatest.prop.PropertyChecks
 import scala.util.Random
 import com.treode.cps.scalatest.{CpsFlatSpec, CpsPropSpec}
 import com.treode.cps.io.{SocketBehaviors, SocketChecks}
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 import com.treode.cps.sync.Future
 
 import Future.start
@@ -32,10 +32,9 @@ class SocketStubSpec extends Specs (SocketStubBehaviors, SocketStubProperties)
 
 private object SocketStubBehaviors extends CpsFlatSpec with SocketBehaviors {
 
-  class StubSpecKit extends CpsSpecKit.Sequential with SocketSpecKit {
-    import scheduler.spawn
+  class StubSpecKit extends SocketSpecKit {
     implicit val random = new scala.util.Random (0)
-    def run (cond: => Boolean) = run ()
+    implicit val scheduler = TestScheduler.sequential ()
     def newServerAddress() = SocketAddressStub ()
     def newSocket() = new SocketStub ()
     def newServerSocket() = new ServerSocketStub ()
@@ -117,10 +116,8 @@ private object SocketStubBehaviors extends CpsFlatSpec with SocketBehaviors {
 
 private object SocketStubProperties extends CpsPropSpec with SocketChecks {
 
-  class StubSpecKit (r: Random)
-  extends CpsSpecKit.RandomKit (r)
-  with SocketSpecKit {
-    def run (cond: => Boolean) = run ()
+  class StubSpecKit (implicit random: Random) extends SocketSpecKit {
+    implicit val scheduler = TestScheduler.random (random)
     def newServerAddress() = SocketAddressStub ()
     def newSocket() = new SocketStub ()
     def newServerSocket() = new ServerSocketStub ()
@@ -128,5 +125,5 @@ private object SocketStubProperties extends CpsPropSpec with SocketChecks {
 
   property ("SocketStubs open, connect, send and receive") {
     forAll (seeds) { seed: Long =>
-      checkOpenConnectWriteRead (new StubSpecKit (new Random (seed)))
+      checkOpenConnectWriteRead (new StubSpecKit () (new Random (seed)))
     }}}

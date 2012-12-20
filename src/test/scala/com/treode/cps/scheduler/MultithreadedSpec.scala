@@ -17,10 +17,10 @@ package com.treode.cps.scheduler
 
 import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 class MultithreadedSpec extends FlatSpec with SchedulerBehaviors {
 
   "A Scheduler with a ForkJoinPool" should behave like aScheduler (
-      () => CpsSpecKit.newMultihreadedKit (false))
+      () => TestScheduler.multithreaded (false))
 }

@@ -28,7 +28,7 @@ import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.prop.PropertyChecks
 import scala.collection.mutable
 import scala.util.Random
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 import com.treode.cps.stub.io.{ServerSocketStub, SocketAddressStub, SocketStub}
 
 class SecureSpec extends PropSpec with PropertyChecks with SocketChecks {
@@ -50,16 +50,16 @@ class SecureSpec extends PropSpec with PropertyChecks with SocketChecks {
   val context = SSLContext.getInstance ("TLS")
   context.init (kmf.getKeyManagers (), tmf.getTrustManagers (), null)
 
-  class SecureSpecKit (r: Random) extends CpsSpecKit.RandomKit (r) with SocketSpecKit {
-    def run (cond: => Boolean) = run()
+  class SecureSpecKit (implicit random: Random) extends SocketSpecKit {
+    implicit val scheduler = TestScheduler.random (random)
     def newServerAddress() = SocketAddressStub ()
-    def newSocket() = SecureSocket (new SocketStub(), context, true)
-    def newServerSocket() = SecureServerSocket (new ServerSocketStub(), context)
+    def newSocket() = SecureSocket (new SocketStub (), context, true)
+    def newServerSocket() = SecureServerSocket (new ServerSocketStub( ), context)
   }
 
   property ("SecureChannels can open, connect, send and receive") {
     // TODO: Something is broken somewhere.  This should be:
     // forAll (Gen.choose (0L, Long.MaxValue)) { seed: Long =>
     (0 to 100) .filterNot (Seq (65, 70) contains _) .foreach { seed: Int =>
-      checkOpenConnectWriteRead (new SecureSpecKit (new Random (seed)))
+      checkOpenConnectWriteRead (new SecureSpecKit () (new Random (seed)))
     }}}

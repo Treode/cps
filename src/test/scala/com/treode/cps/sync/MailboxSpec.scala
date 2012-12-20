@@ -24,15 +24,14 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.matchers.ShouldMatchers
 import com.treode.cps.scalatest.CpsPropSpec
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 class MailboxSpec extends CpsPropSpec {
 
   property ("A Mailbox delivers every message exactly once with the random scheduler") {
     forAll (seeds) { seed: Long =>
-      val kit = CpsSpecKit.newRandomKit (seed)
-      import kit.scheduler
-      import kit.scheduler.spawn
+      implicit val scheduler = TestScheduler.random (seed)
+      import scheduler.spawn
 
       val n = 12
       val log = mutable.Set [Int] ()
@@ -46,16 +45,16 @@ class MailboxSpec extends CpsPropSpec {
           assert (log.add (mailbox.receive ()))
           assert (log.add (mailbox.receive ()))
         }}
-      kit.run ()
+      scheduler.run ()
       expectResult ((1 to 2*n).toSet) (log)
     }}
 
   property ("A Mailbox delivers every message exactly once with the multithreaded scheduler") {
     val n = 1000
     val latch = new AtomicInteger (n)
-    val kit = CpsSpecKit.newMultihreadedKit (latch.get > 0)
-    import kit.scheduler
-    import kit.scheduler.spawn
+
+    implicit val scheduler = TestScheduler.multithreaded (latch.get > 0)
+    import scheduler.spawn
 
     val log = new ConcurrentHashMap [Int, String] ()
     val mailbox = Mailbox [Int] ()
@@ -71,6 +70,6 @@ class MailboxSpec extends CpsPropSpec {
         assert (log.putIfAbsent (m2, "") == null)
         latch.decrementAndGet
       }}
-    kit.run ()
+    scheduler.run ()
     expectResult ((1 to 2*n).toSet) (log .map (_._1) .toSet)
   }}

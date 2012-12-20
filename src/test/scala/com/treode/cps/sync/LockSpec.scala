@@ -20,7 +20,7 @@ import scala.collection.mutable
 import org.scalatest.Specs
 import com.treode.cps._
 import com.treode.cps.scalatest.{CpsFlatSpec, CpsPropSpec}
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 class LockSpec extends Specs (LockBehaviors, LockProperties)
 
@@ -30,10 +30,9 @@ private object LockBehaviors extends CpsFlatSpec {
 
   "A Lock" should "pass an exception through" during {
     val log = withLog ("mark")
-    val kit = withCpsKit (CpsSpecKit.newSequentialKit)
 
-    import kit.scheduler
-    import kit.scheduler.spawn
+    implicit val scheduler = withScheduler (TestScheduler.sequential ())
+    import scheduler.spawn
 
     val lock = Lock ()
     spawn {
@@ -49,10 +48,9 @@ private object LockProperties extends CpsPropSpec {
         val m = 17
         val n = 11
         val log = withLog ((0 until m * n) map (_.toString): _*)
-        val kit = withCpsKit (CpsSpecKit.newRandomKit (seed))
 
-        import kit.scheduler
-        import kit.scheduler.{cede, spawn, suspend}
+        implicit val scheduler = withScheduler (TestScheduler.random (seed))
+        import scheduler.{cede, spawn, suspend}
 
         val lock = Lock()
         for (i <- 0 until m) {
@@ -69,10 +67,9 @@ private object LockProperties extends CpsPropSpec {
       val n = 37
       val latch = new AtomicInteger (m * n)
       val log = withLog ((0 until m * n) map (_.toString): _*)
-      val kit = withCpsKit (CpsSpecKit.newMultihreadedKit (latch.get > 0))
 
-      import kit.scheduler
-      import kit.scheduler.{cede, spawn, suspend}
+      implicit val scheduler = withScheduler (TestScheduler.multithreaded (latch.get > 0))
+      import scheduler.{cede, spawn, suspend}
 
       val lock = Lock ()
       for (i <- 0 until m) {

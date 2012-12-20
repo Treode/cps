@@ -21,12 +21,12 @@ import org.scalatest.PropSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.PropertyChecks
 import com.treode.cps.scalatest.CpsPropSpec
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 class RandomSpec extends CpsPropSpec with SchedulerProperties {
 
   def name = "RandomScheduler"
 
   def factory (seed: Long) = {
-    () => CpsSpecKit.newRandomKit (seed)
+    () => TestScheduler.random (seed)
   }}

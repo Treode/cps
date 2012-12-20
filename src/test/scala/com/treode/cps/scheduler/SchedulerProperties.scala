@@ -16,13 +16,13 @@
 package com.treode.cps.scheduler
 
 import com.treode.cps.scalatest.CpsPropSpec
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 private [cps] trait SchedulerProperties extends SchedulerChecks {
   this: CpsPropSpec =>
 
   def name: String
-  def factory (seed: Long): () => CpsSpecKit
+  def factory (seed: Long): () => TestScheduler
 
   property ("A " + name + " runs each task exactly once") {
     forAll ("seed") { seed: Int =>

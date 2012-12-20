@@ -17,9 +17,9 @@ package com.treode.cps.scheduler
 
 import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 class SequentialSpec extends FlatSpec with SchedulerBehaviors {
 
-  "A Scheduler with a sequential Executor" should behave like aScheduler (() => CpsSpecKit.newSequentialKit)
+  "A Scheduler with a sequential Executor" should behave like aScheduler (TestScheduler.sequential _)
 }

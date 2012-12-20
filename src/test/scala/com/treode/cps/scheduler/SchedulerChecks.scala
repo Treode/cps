@@ -18,38 +18,38 @@ package com.treode.cps.scheduler
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import org.scalatest.Assertions
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 trait SchedulerChecks extends Assertions {
 
   private class DistinguishedException extends Exception
   private def fatal = new DistinguishedException
 
-  def checkRunsEachTaskExactlyOnce (factory: () => CpsSpecKit) {
-    val kit = factory ()
-    import kit.scheduler.spawn
+  def checkRunsEachTaskExactlyOnce (factory: () => TestScheduler) {
+    val scheduler = factory ()
+    import scheduler.spawn
 
     val n = 12
     var v = Vector.fill (n) (new AtomicInteger (0)) // Track tasks
     for (i <- 0 to n-1) (spawn (v (i).addAndGet (i))) // Add to detect double runs
-    kit.run ()
+    scheduler.run ()
     for (i <- 0 to n-1) (expectResult (i) (v (i).get ())) // Did each run once?
   }
 
-  protected [this] def checkRunsEachTimerExactlyOnce (factory: () => CpsSpecKit) {
-    val kit = factory ()
-    import kit.scheduler.schedule
+  protected [this] def checkRunsEachTimerExactlyOnce (factory: () => TestScheduler) {
+    val scheduler = factory ()
+    import scheduler.schedule
 
     val n = 12
     var v = Vector.fill (n) (new AtomicInteger (0)) // Track timers
     for (i <- 0 to n-1) (schedule (i, MILLISECONDS) (v (i).addAndGet (i))) // Add to detect double runs
-    kit.run ()
+    scheduler.run ()
     for (i <- 0 to n-1) (expectResult (i) (v (i).get)) // Did each run once?
   }
 
-  def checkRunsNestedTasks (factory: () => CpsSpecKit) {
-    val kit = factory ()
-    import kit.scheduler.spawn
+  def checkRunsNestedTasks (factory: () => TestScheduler) {
+    val scheduler = factory ()
+    import scheduler.spawn
 
     val n = 4
     var v1 = Vector.fill (n) (new AtomicInteger (0))
@@ -68,7 +68,7 @@ trait SchedulerChecks extends Assertions {
         v1 (i).addAndGet (i)
       }}
 
-    kit.run ()
+    scheduler.run ()
     for (i <- 0 to n-1) {
       expectResult (i) (v1 (i).get ())
       for (j <- 0 to n-1) {

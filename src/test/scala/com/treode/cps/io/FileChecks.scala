@@ -21,22 +21,21 @@ import java.nio.file.{Files, Path, Paths, OpenOption, StandardOpenOption}
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 import org.scalatest.Assertions
-import com.treode.cps.scheduler.Scheduler
+import com.treode.cps.stub.scheduler.TestScheduler
 
-import StandardOpenOption._
+import StandardOpenOption.{CREATE, READ, WRITE}
 
 trait FileChecks {
   this: Assertions =>
 
   trait FileSpecKit {
 
-    val scheduler: Scheduler
-    import scheduler.spawn
+    val scheduler: TestScheduler
 
     def openFile (path: Path, opts: OpenOption*): File
 
     /** Run until the system is quiet and the condition is false. */
-    def run (cond: => Boolean): Unit
+    def run (cond: => Boolean): Unit = scheduler.run (cond)
   }
 
   def checkOpenWriteCloseOpenRead (kit: FileSpecKit) {

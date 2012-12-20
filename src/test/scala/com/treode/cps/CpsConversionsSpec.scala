@@ -19,7 +19,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
 import scala.collection.{generic, mutable}
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 import CpsConversions._
 
@@ -39,8 +39,8 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
     }}
 
   "CpsConversions" should "support foreach" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler.spawn
+    val scheduler = TestScheduler.sequential
+    import scheduler.spawn
 
     val q1 = mutable.Queue [Int] ()
     val q2 = mutable.Queue [Int] ()
@@ -48,15 +48,15 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
       for (i <- (1 to 10).cps) (q1 += cut (i))
       (1 to 10).cps.foreach (q2 += cut (_))
     }
-    kit.run ()
+    scheduler.run ()
     val expected = mutable.Queue (1 to 10: _*)
     q1 should be (expected)
     q2 should be (expected)
   }
 
   it should "run foreach on each element immediately" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler.spawn
+    val scheduler = TestScheduler.sequential
+    import scheduler.spawn
 
     val s = new Shifter [Int]
     var x = 0
@@ -64,18 +64,18 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
       for (i <- s) (cut (x = i))
     }
     // Run the scheduler to set the continuation in the shifter.
-    kit.run ()
+    scheduler.run ()
     for (i <- 1 to 10) {
       s.put (i)
       // Run the scheduler to carry out as much as possible.
-      kit.run ()
+      scheduler.run ()
       // Check that work was done with awaiting the whole "collection."
       x should be (i)
     }}
 
   it should "support map" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler.spawn
+    val scheduler = TestScheduler.sequential
+    import scheduler.spawn
 
     val expected = 2 to 20 by 2
     spawn {
@@ -88,12 +88,12 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
       }.toList
       s2 should be (expected)
     }
-    kit.run ()
+    scheduler.run ()
   }
 
   it should "run map on each element immediately" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler.spawn
+    val scheduler = TestScheduler.sequential
+    import scheduler.spawn
 
     val s = new Shifter [Int]
     var x = 0
@@ -103,16 +103,16 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
         val j = cut (i * 2)
       } (cut (x = j))
     }
-    kit.run ()
+    scheduler.run ()
     for (i <- 1 to 10) {
       s.put (i)
-      kit.run ()
+      scheduler.run ()
       x should be (i*2)
     }}
 
   it should "support flatMap" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler.spawn
+    val scheduler = TestScheduler.sequential
+    import scheduler.spawn
 
     val expected = (1 to 10) flatMap (_ to 10)
     spawn {
@@ -128,12 +128,12 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
       }.toList
       s2 should be (expected)
     }
-    kit.run ()
+    scheduler.run ()
   }
 
   it should "run flatMap over each nested element immediately" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler.spawn
+    val scheduler = TestScheduler.sequential
+    import scheduler.spawn
 
     val s = new Shifter [Int]
     var b = List.newBuilder [Int]
@@ -143,17 +143,17 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
         j <- (i to 10).cps
       } (cut (b += j))
     }
-    kit.run ()
+    scheduler.run ()
     for (i <- 1 to 10) {
       s.put (i)
-      kit.run ()
+      scheduler.run ()
       b.result () should be (i to 10)
       b = List.newBuilder [Int]
     }}
 
   it should "support filter" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler.spawn
+    val scheduler = TestScheduler.sequential
+    import scheduler.spawn
 
     val expected = (1 to 10) filter (_ % 2 == 0)
     spawn {
@@ -169,12 +169,12 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
       }.toList
       s2 should be (expected)
     }
-    kit.run ()
+    scheduler.run ()
   }
 
   it should "filter each element immediately" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler.spawn
+    val scheduler = TestScheduler.sequential
+    import scheduler.spawn
 
     val s = new Shifter [Int]
     var x = 0
@@ -184,17 +184,17 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
         if cut (i % 2 == 0)
       } (cut (x = i))
     }
-    kit.run ()
+    scheduler.run ()
     for (i <- 1 to 10) {
       s.put (i)
-      kit.run ()
+      scheduler.run ()
       if (i % 2 == 0) {
         x should be (i)
       }}}
 
   it should "support repeating methods" in {
-    val kit = CpsSpecKit.newSequentialKit
-    import kit.scheduler.spawn
+    val scheduler = TestScheduler.sequential
+    import scheduler.spawn
 
     spawn {
       var i = 0
@@ -204,5 +204,5 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
       }.toList
       s should be (1 to 10)
     }
-    kit.run ()
+    scheduler.run ()
   }}

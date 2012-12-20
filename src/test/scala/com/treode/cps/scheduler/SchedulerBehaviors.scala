@@ -16,12 +16,12 @@
 package com.treode.cps.scheduler
 
 import org.scalatest.FlatSpec
-import com.treode.cps.stub.CpsSpecKit
+import com.treode.cps.stub.scheduler.TestScheduler
 
 trait SchedulerBehaviors extends SchedulerChecks {
   this: FlatSpec =>
 
-  def aScheduler (factory: () => CpsSpecKit) = {
+  def aScheduler (factory: () => TestScheduler) = {
     it should "run each task exactly once" in {
       checkRunsEachTaskExactlyOnce (factory)
     }

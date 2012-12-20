@@ -167,7 +167,7 @@ object SchedulerConfig {
     new SafeThunk (s, k)
 }
 
-class Scheduler private (cfg: SchedulerConfig) {
+class Scheduler private [cps] (cfg: SchedulerConfig) {
   import cfg.{executor, makeThump, makeThunk, timer}
 
   private def reset (k: => Any @thunk): Unit =
