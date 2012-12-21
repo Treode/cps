@@ -36,26 +36,27 @@ trait AbstractSocketStub extends NetworkChannel with AtomicState {
   def supportedOptions = Set [SocketOption [_]] ()
 
   protected trait AbstractSocketState {
-    def close (): Behavior [Unit]
-    def shutdown (): Behavior [Unit]
-    def localAddress: Behavior [Option [SocketAddress]]
-    def isOpen: Behavior [Boolean] = effect (true)
-    def closedByShutdown: Behavior [Boolean] = illegalState ("Socket is still open.")
+    def close (): Option [Unit]
+    def shutdown (): Option [Unit]
+    def localAddress: Option [Option [SocketAddress]]
+    def isOpen: Option [Boolean] = effect (true)
+    def closedByShutdown: Option [Boolean] =
+      throw new AssertionError ("Socket is still open.")
   }
 
   protected type State <: AbstractSocketState
 
-  private [io] def shutdown () = delegate (_.shutdown ())
+  private [io] def shutdown () = delegate2 (_.shutdown ())
 
-  def close () = delegate (_.close ())
-  def isOpen = delegate (_.isOpen)
-  def localAddress = delegate (_.localAddress)
+  def close () = delegate2 (_.close ())
+  def isOpen = delegate2 (_.isOpen)
+  def localAddress = delegate2 (_.localAddress)
 
   /** The stack trace recording this socket's creation. */
   val createdAt = Thread.currentThread.getStackTrace
 
   /** Was this socket closed by `close` or system shutdown? */
-  def closedByShutdown = delegate (_.closedByShutdown)
+  def closedByShutdown = delegate2 (_.closedByShutdown)
 
   protected trait AbstractUnconnectedState extends AbstractSocketState {
     def localAddress = effect (None)
@@ -64,7 +65,7 @@ trait AbstractSocketStub extends NetworkChannel with AtomicState {
   protected trait AbstractClosedByClose extends AbstractSocketState {
     def close () = effect ()
     def shutdown () = effect ()
-    def localAddress = toss (closed)
+    def localAddress = throw closed
     override def isOpen = effect (false)
     override def closedByShutdown = effect (false)
   }

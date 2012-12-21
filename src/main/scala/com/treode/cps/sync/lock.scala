@@ -31,35 +31,36 @@ trait Lock {
 
 private class LockImpl (protected [this] val scheduler: Scheduler)
 extends AtomicState with Lock {
+  import scheduler.suspend
 
   initialize (Unlocked)
 
   protected [this] trait State {
 
-    def acquire () (k: Unit => Unit): Behavior [Unit]
+    def acquire (k: Unit => Unit): Option [Unit]
 
-    def release (): Behavior [Unit]
+    def release (): Option [Unit]
 
-    def reverse (out: List [Unit => Unit]): Behavior [Unit] =
-      illegalState ("Cannot reverse when not reversing.")
+    def reverse (out: List [Unit => Unit]): Option [Unit] =
+      throw new IllegalStateException ("Cannot reverse when not reversing.")
   }
 
   /** No fiber holds the lock, and no fiber is waiting on the lock. */
   private [this] object Unlocked extends State {
 
     // Let the caller proceed immediately.
-    def acquire () (k: Unit => Unit) = moveTo (Locked) withEffect (k ())
+    def acquire (k: Unit => Unit) = move (this, Locked) (k ())
 
-    def release () = illegalState ("Cannot release unacquired lock.")
+    def release () = throw new IllegalStateException ("Cannot release unacquired lock.")
   }
 
   /** A fiber holds the lock, and no fiber is waiting. */
   private [this] object Locked extends State {
 
     // Queue the caller.
-    def acquire () (k: Unit => Unit) = moveTo (new Queued (k)) withoutEffect
+    def acquire (k: Unit => Unit) = move (this, new Queued (k)) (())
 
-    def release () = moveTo (Unlocked) withoutEffect
+    def release () = move (this, Unlocked) (())
   }
 
   /** A fiber holds the lock, and some fibers are waiting. */
@@ -67,20 +68,20 @@ extends AtomicState with Lock {
     def this (k: Unit => Unit) = this (List (), List (k))
 
     // Queue the caller.
-    def acquire () (k: Unit => Unit) = moveTo (new Queued (k::in, out)) withoutEffect
+    def acquire (k: Unit => Unit) = move (this, new Queued (k::in, out)) (())
 
     def release () = (in, out) match {
       // When in state Queued, in or out should have waiters.
-      case (List (), List ()) => assertionError [Unit] ("Queue should not be empty.")
+      case (List (), List ()) => throw new AssertionError ("Queue should not be empty.")
 
       // Handoff to the last waiter.
-      case (List (), List (k)) => moveTo (Locked) withEffect (k ())
+      case (List (), List (k)) => move (this, Locked) (k ())
 
       // Handoff to the next waiter.
-      case (_, k::ks) => moveTo (new Queued (in, ks)) withEffect (k ())
+      case (_, k::ks) => move (this, new Queued (in, ks)) (k ())
 
       // Reverse the `in` queue of waiters.
-      case (_, List ()) => moveTo (new Reversing ()) withEffect {
+      case (_, List ()) => move (this, new Reversing ()) {
         LockImpl.this.reverse (in.reverse)
       }}}
 
@@ -89,29 +90,30 @@ extends AtomicState with Lock {
     def this () = this (List ())
 
     // Queuer the waiter.
-    def acquire () (k: Unit => Unit) = moveTo (new Reversing (k :: in)) withoutEffect
+    def acquire (k: Unit => Unit) = move (this, new Reversing (k :: in)) (())
 
     // No fiber should hold the lock while we reverse the `in` list.
-    def release () = illegalState ("Cannot release unacquired lock.")
+    def release () = throw new IllegalStateException ("Cannot release unacquired lock.")
 
     // The fiber reversing the `in` list has finished, and presents it as the new `out` list.
     override def reverse (out: List [Unit => Unit]) =
       out match {
         // When in state Reversing, the `in` list being reversed should have had waiters.
-        case List () => assertionError [Unit] ("Out queue should not be empty.")
+        case List () => throw new AssertionError ("Out queue should not be empty.")
 
         // Handoff to the last waiter.
-        case List (k) => moveTo (Locked) withEffect (k ())
+        case List (k) => move (this, Locked) (k ())
 
         // Handoff to the next waiter.
-        case k::ks => moveTo (new Queued (in, ks)) withEffect (k ())
+        case k::ks => move (this, new Queued (in, ks)) (k ())
       }}
 
-  private [this] def acquire () = delegateT (_.acquire ())
+  private [this] def acquire () =
+    suspend [Unit] (k => delegate2 (_.acquire (k)))
 
-  private [this] def release () = delegate (_.release ())
+  private [this] def release () = delegate2 (_.release ())
 
-  private [this] def reverse (out: List [Unit => Unit]) = delegate (_.reverse (out))
+  private [this] def reverse (out: List [Unit => Unit]) = delegate2 (_.reverse (out))
 
   def exclusive [T] (f: => T @thunk): T @thunk = {
     acquire ()

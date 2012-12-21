@@ -33,28 +33,40 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
   private [this] case class Point (buf: ByteBuffer, k: Int => Unit, n: Int, i: Int)
 
   protected [this] trait State {
-    def read (r: Point): Behavior [Unit]
-    def write (w: Point): Behavior [Unit]
-    def deliver (): Behavior [Unit] = illegalState ("Cannot deliver when not delivering.")
+
+    def read (r: Point): Option [Unit]
+
+    def write (w: Point): Option [Unit]
+
+    def deliver (): Option [Unit] =
+      throw new AssertionError ("Cannot deliver when not delivering.")
   }
 
   private [this] object Empty extends State {
-    def read (r: Point) = moveTo (new HaveReader (r)) withoutEffect
-    def write (w: Point) = moveTo (new HaveWriter (w)) withoutEffect
+
+    def read (r: Point) = move (this, new HaveReader (r)) (())
+
+    def write (w: Point) = move (this, new HaveWriter (w)) (())
   }
 
   private [this] class HaveReader (r: Point) extends State {
+
     def read (r: Point) = readPending
-    def write (w: Point) = moveTo (new Delivering (r, w)) withEffect (Simplex.this.deliver ())
+
+    def write (w: Point) = move (this, new Delivering (r, w)) (Simplex.this.deliver ())
   }
 
   private [this] class HaveWriter (w: Point) extends State {
-    def read (r: Point) = moveTo (new Delivering (r, w)) withEffect (Simplex.this.deliver ())
+
+    def read (r: Point) = move (this, new Delivering (r, w)) (Simplex.this.deliver ())
+
     def write (w: Point) = writePending
   }
 
   private [this] class Delivering (r: Point, w: Point) extends State {
+
     def read (r: Point) = readPending
+
     def write (w: Point) = writePending
 
     private def copy (n: Int) = for (i <- 1 to n) (r.buf.put (w.buf.get))
@@ -62,13 +74,13 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
     override def deliver () = {
       if (r.i < w.i) {
         copy (r.i)
-        moveTo (new HaveWriter (Point (w.buf, w.k, w.n, w.i - r.i))) withEffect (r.k (r.n))
+        move (this, new HaveWriter (Point (w.buf, w.k, w.n, w.i - r.i))) (r.k (r.n))
       } else {
         copy (w.i)
-        moveTo (Empty) withEffect { r.k (r.n - r.i + w.i); w.k (w.n) }
+        move (this, Empty) { r.k (r.n - r.i + w.i); w.k (w.n) }
       }}}
 
-  private [this] def deliver () = delegate (_.deliver ())
+  private [this] def deliver () = delegate2 (_.deliver ())
 
   private val min = 100
   private val max = 1000
@@ -78,12 +90,12 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
       // Our packet size for this time, somewhere between min and max.
       val r = random.nextInt (max + 1)
       val n = math.min (dst.remaining, math.max (min, r))
-      if (n == 0) k (0) else delegate (_.read (Point (dst, k, n, n)))
+      if (n == 0) k (0) else delegate2 (_.read (Point (dst, k, n, n)))
     }
 
   def write (src: ByteBuffer): Int @thunk =
     suspend { (k: Int => Unit) =>
       val r = random.nextInt (max + 1)
       val n = math.min (src.remaining, math.max (min, r))
-      if (n == 0) k (0) else delegate (_.write (Point (src, k, n, n)))
+      if (n == 0) k (0) else delegate2 (_.write (Point (src, k, n, n)))
     }}

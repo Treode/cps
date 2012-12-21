@@ -69,7 +69,7 @@ trait Mailbox [A] extends Maildrop [A] {
 
 private class MailboxImpl [A] (protected [this] val scheduler: Scheduler)
 extends AtomicState with Mailbox [A] {
-  import scheduler.spawn
+  import scheduler.{spawn, suspend}
 
   private type Msgs = List [A]
   private type Rcvrs = List [A => Unit]
@@ -88,27 +88,27 @@ extends AtomicState with Mailbox [A] {
 
   protected [this] trait State {
 
-    def send (m: A): Behavior [Unit]
+    def send (m: A): Option [Unit]
 
-    def receive (k: A => Unit): Behavior [Unit]
+    def receive (k: A => Unit): Option [Unit]
 
-    def receiveAll (k: List [A] => Unit): Behavior [Unit]
+    def receiveAll (k: List [A] => Unit): Option [Unit]
 
-    def reversed (mOut: Msgs, kOut: Rcvrs): Behavior [Unit] =
-      illegalState ("Cannot reverse when not reversing.")
+    def reversed (mOut: Msgs, kOut: Rcvrs): Option [Unit] =
+      throw new IllegalStateException ("Cannot reverse when not reversing.")
 
-    def zipped (mOut: Msgs, kOut: Rcvrs): Behavior [Unit] =
-      illegalState ("Cannot zip when not zipping.")
+    def zipped (mOut: Msgs, kOut: Rcvrs): Option [Unit] =
+      throw new IllegalStateException ("Cannot zip when not zipping.")
   }
 
   /** No messages or receivers waiting. */
   private [this] object Empty extends State {
 
     def send (m: A) =
-      moveTo (new MsgsQd (m)) withoutEffect
+      move (this, new MsgsQd (m)) (())
 
     def receive (k: A => Unit) =
-      moveTo (new RcvrsQd (k)) withoutEffect
+      move (this, new RcvrsQd (k)) (())
 
     def receiveAll (k: List [A] => Unit) =
       receive (m => k (List (m)))
@@ -119,32 +119,32 @@ extends AtomicState with Mailbox [A] {
     def this (m: A) = this (List (), List (m))
 
     def send (m: A) =
-      moveTo (new MsgsQd (m::in, out)) withoutEffect
+      move (this, new MsgsQd (m::in, out)) (())
 
     def receive (k: A => Unit) =
       (in, out) match {
         // When in state MsgsQd, one or both of in and out should have messages.
         case (List (), List ()) =>
-          assertionError [Unit] ("Message queue should not be empty.")
+          throw new AssertionError ("Message queue should not be empty.")
 
         // Return the last waiting message, and move to the state Empty.
         case (List (), List (m)) =>
-          moveTo (Empty) withEffect (k (m))
+          move (this, Empty) (k (m))
 
         // Return the next waiting message, and stay in this state.
         case (_, m::ms) =>
-          moveTo (new MsgsQd (in, ms)) withEffect (k (m))
+          move (this, new MsgsQd (in, ms)) (k (m))
 
         // Reverse the messages waiting on the in queue.  If this fiber successfully moves the
         // mailbox to the Reversing state, then give the reversed `in` queue to the `reversed`
         // transition.
         case (_, List ()) =>
-          moveTo (new Reversing) withEffect {
+          move (this, new Reversing) {
             MailboxImpl.this.reversed (in.reverse, List (k))
           }}
 
     def receiveAll (k: List [A] => Unit) =
-      moveTo (Empty) withEffect (k (out reverse_::: in))
+      move (this, Empty) (k (out reverse_::: in))
   }
 
   /** Only receivers waiting; queue a new receiver; given a message invoke a receiver immediately. */
@@ -155,24 +155,24 @@ extends AtomicState with Mailbox [A] {
       (in, out) match {
         // When in state RcvrsQd, one or both of in and out should have receivers.
         case (List (), List ()) =>
-          assertionError [Unit] ("Receiver queue should not be empty.")
+          throw new AssertionError ("Receiver queue should not be empty.")
 
         // Give the message to the last waiting receiver, and move to the state Empty.
         case (List (), List (k)) =>
-          moveTo (Empty) withEffect (k (m))
+          move (this, Empty) (k (m))
 
         // Give the message to the next waiting receiver, and stay in this state.
         case (_, k::ks) =>
-          moveTo (new RcvrsQd (in, ks)) withEffect (k (m))
+          move (this, new RcvrsQd (in, ks)) (k (m))
 
         // Reverse the receivers waiting on the in queue.
         case (_, List ()) =>
-          moveTo (new Reversing) withEffect {
+          move (this, new Reversing) {
             MailboxImpl.this.reversed (List (m), in.reverse)
           }}
 
     def receive (k: A => Unit) =
-      moveTo (new RcvrsQd (k::in, out)) withoutEffect
+      move (this, new RcvrsQd (k::in, out)) (())
 
     def receiveAll (k: List [A] => Unit) =
       receive (m => k (List (m)))
@@ -183,10 +183,10 @@ extends AtomicState with Mailbox [A] {
     def this () = this (List (), List ())
 
     def send (m: A) =
-      moveTo (new Reversing (m::mIn, kIn)) withoutEffect
+      move (this, new Reversing (m::mIn, kIn)) (())
 
     def receive (k: A => Unit) =
-      moveTo (new Reversing (mIn, k::kIn)) withoutEffect
+      move (this, new Reversing (mIn, k::kIn)) (())
 
     def receiveAll (k: List [A] => Unit) =
       receive (m => k (List (m)))
@@ -197,7 +197,7 @@ extends AtomicState with Mailbox [A] {
       * it hands the left over messages or receivers to the `zipped` transition.
       */
     override def reversed (mOut: Msgs, kOut: Rcvrs) =
-      moveTo (new Zipping (mIn, kIn)) withEffect {
+      move (this, new Zipping (mIn, kIn)) {
         val (mks, ms, ks) = zip (mOut, kOut)
         mks foreach { case (m, k) => k (m) }
         MailboxImpl.this.zipped (ms, ks)
@@ -207,10 +207,10 @@ extends AtomicState with Mailbox [A] {
   private [this] class Zipping (mIn: Msgs, kIn: Rcvrs) extends State {
 
     def send (m: A) =
-      moveTo (new Zipping (m::mIn, kIn)) withoutEffect
+      move (this, new Zipping (m::mIn, kIn)) (())
 
     def receive (k: A => Unit) =
-      moveTo (new Zipping (mIn, k::kIn)) withoutEffect
+      move (this, new Zipping (mIn, k::kIn)) (())
 
     def receiveAll (k: List [A] => Unit) =
       receive (m => k (List (m)))
@@ -226,36 +226,38 @@ extends AtomicState with Mailbox [A] {
         // All messages and receivers that were waiting paired, and no new messages or receivers
         // arrived during the process.  This mailbox is now Empty.
         case (List (), List (), List (), List ()) =>
-          moveTo (Empty) withoutEffect
+          move (this, Empty) (())
 
         // All messages that were waiting went to a receiver and no new messages arrived, but
         // there are still receivers waiting.
         case (List (), List (), _, _) =>
-          moveTo (new RcvrsQd (kIn, kOut)) withoutEffect
+          move (this, new RcvrsQd (kIn, kOut)) (())
 
         // All receivers that were waiting got a message and no new receivers arrived, but there
         // are still messages waiting.
         case (_, _, List (), List ()) =>
-          moveTo (new MsgsQd (mIn, mOut)) withoutEffect
+          move (this, new MsgsQd (mIn, mOut)) (())
 
         // Anything not the above: maybe the waiting messages and receivers didn't pair up and
         // one or the other was left over, or maybe messages and receivers arrived while the
         // pairing was occurring, or maybe some combination of these things.  Go back to the state
         // Reversing to sort it out.
         case (_, _, _, _) =>
-          moveTo (new Reversing) withEffect {
+          move (this, new Reversing) {
             MailboxImpl.this.reversed (mOut reverse_::: mIn, kOut reverse_::: kIn)
           }}}
 
-  private [this] def reversed (mOut: Msgs, kOut: Rcvrs) = delegate (_.reversed (mOut, kOut))
+  private [this] def reversed (mOut: Msgs, kOut: Rcvrs) = delegate2 (_.reversed (mOut, kOut))
 
-  private [this] def zipped (mOut: Msgs, kOut: Rcvrs) = delegate (_.zipped (mOut, kOut))
+  private [this] def zipped (mOut: Msgs, kOut: Rcvrs) = delegate2 (_.zipped (mOut, kOut))
 
-  def send (m: A): Unit = delegate (_.send (m))
+  def send (m: A): Unit = delegate2 (_.send (m))
 
-  def receive (): A @thunk = delegateT (_.receive)
+  def receive (): A @thunk =
+    suspend [A] (k => delegate2 (_.receive (k)))
 
-  def receiveAll (): List [A] @thunk = delegateT (_.receiveAll)
+  def receiveAll (): List [A] @thunk =
+    suspend [List [A]] (k => delegate2 (_.receiveAll (k)))
 
   def loop (f: A => Any): Unit = spawn (while (true) f (receive ()))
 

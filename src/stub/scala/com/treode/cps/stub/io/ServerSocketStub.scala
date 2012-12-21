@@ -24,7 +24,7 @@ import com.treode.cps.scheduler.Scheduler
 
 class ServerSocketStub (protected implicit val scheduler: Scheduler)
 extends AbstractSocketStub with ServerSocket {
-  import scheduler.spawn
+  import scheduler.{spawn, suspend}
 
   initialize (Unbound)
 
@@ -33,60 +33,85 @@ extends AbstractSocketStub with ServerSocket {
   private def notYetBound = new NotYetBoundException
 
   protected trait State extends AbstractSocketState {
-    def accept () (k: Thunk [Socket]): Behavior [Unit]
-    def bind (local: SocketAddress, backlog: Int = 0): Behavior [ServerSocketStub.this.type]
-    def accepted (): Behavior [Unit] = illegalState ("Cannot have accepted when not accepting.")
+
+    def accept (k: Thunk [Socket]): Option [Unit]
+
+    def bind (local: SocketAddress, backlog: Int = 0): Option [Unit]
+
+    def accepted (): Option [Unit] =
+      throw new IllegalStateException ("Cannot have accepted when not accepting.")
   }
 
   private object Unbound extends AbstractUnconnectedState with State {
-    def close () = moveTo (ClosedByClose) withoutEffect
-    def accept () (k: Thunk [Socket]) = effect (k.fail (notYetBound))
+
+    def close () = move (this, ClosedByClose) (())
+
+    def accept (k: Thunk [Socket]) = effect (k.fail (notYetBound))
+
     def bind (local: SocketAddress, backlog: Int) =
       local match {
         case local: SocketAddressStub =>
-          moveTo (new Bound (local)) .withEffect [ServerSocketStub.this.type] (ServerSocketStub.this)
+          move (this, new Bound (local)) (())
         case _ =>
-          toss [ServerSocketStub.this.type] (unsupportedAddressType)
+          throw unsupportedAddressType
       }
-    def shutdown () = moveTo (ClosedByShutdown) withoutEffect
+
+    def shutdown () = move (this, ClosedByShutdown) (())
   }
 
   private class Bound (local: SocketAddressStub) extends State {
-    def close () = moveTo (ClosedByClose) withoutEffect
+
+    def close () = move (this, ClosedByClose) (())
+
     def localAddress = effect (Some (local))
-    def accept () (k: Thunk [Socket]) =
-      moveTo (new Accepting (local, k)) withEffect {
+
+    def accept (k: Thunk [Socket]) =
+      move (this, new Accepting (local, k)) {
         spawn {
           val s = local.accept ()
           ServerSocketStub.this.accepted ()
           k (s)
         }}
-    def bind (local: SocketAddress, backlog: Int) = toss [ServerSocketStub.this.type] (alreadyBound)
-    def shutdown () = moveTo (ClosedByShutdown) withoutEffect
+
+    def bind (local: SocketAddress, backlog: Int) = throw alreadyBound
+
+    def shutdown () = move (this, ClosedByShutdown) (())
   }
 
   private class Accepting (local: SocketAddressStub, k: Thunk [Socket]) extends State {
-    def close () = moveTo (ClosedByClose) withEffect (k.fail (asyncClose))
+
+    def close () = move (this, ClosedByClose) (k.fail (asyncClose))
+
     def localAddress = effect (Some (local))
-    def accept () (k: Thunk [Socket]) = effect (k.fail (acceptPending))
-    def bind (local: SocketAddress, backlog: Int) = toss [ServerSocketStub.this.type] (alreadyBound)
-    def shutdown () = moveTo (ClosedByShutdown) withEffect (k.fail (asyncClose))
-    override def accepted () = moveTo (new Bound (local)) withoutEffect
+
+    def accept (k: Thunk [Socket]) = effect (k.fail (acceptPending))
+
+    def bind (local: SocketAddress, backlog: Int) = throw alreadyBound
+
+    def shutdown () = move (this, ClosedByShutdown) (k.fail (asyncClose))
+
+    override def accepted () = move (this, new Bound (local)) (())
   }
 
   private trait AbstractClosed extends State {
-    def accept () (k: Thunk [Socket]) = effect (k.fail (closed))
-    def bind (local: SocketAddress, backlog: Int) = toss [ServerSocketStub.this.type] (closed)
+
+    def accept (k: Thunk [Socket]) = effect (k.fail (closed))
+
+    def bind (local: SocketAddress, backlog: Int) = throw closed
   }
+
   private object ClosedByClose extends AbstractClosed with AbstractClosedByClose
+
   private object ClosedByShutdown extends AbstractClosed with AbstractClosedByShutdown
 
-  private [io] def accepted () = delegate (_.accepted ())
+  private [io] def accepted () = delegate2 (_.accepted ())
 
-  def accept () = delegateT (_.accept ())
-  def bind (local: SocketAddress, backlog: Int = 0): this.type =
-    delegate [this.type] (_.bind (local, backlog))
-}
+  def accept () = suspend [Socket] (k => delegate2 (_.accept (k)))
+
+  def bind (local: SocketAddress, backlog: Int = 0): this.type = {
+    delegate2 (_.bind (local, backlog))
+    this
+  }}
 
 object ServerSocketStub {
 

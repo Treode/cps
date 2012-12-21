@@ -36,21 +36,22 @@ trait Future [+A] {
 private class Promise [A] (
   protected [this] implicit val scheduler: Scheduler
 ) extends Future [A] with AtomicState {
+  import scheduler.suspend
 
   protected [this] trait State {
 
-    def get (k: Thunk [A]): Behavior [Unit]
-    def set (v: A): Behavior [Unit]
-    def fail (e: Throwable): Behavior [Unit]
+    def get (k: Thunk [A]): Option [Unit]
+    def set (v: A): Option [Unit]
+    def fail (e: Throwable): Option [Unit]
   }
 
   // The computation has not started yet.
   private [sync] class Delayed (f: => A @thunk) extends State {
 
-    private def block [A] () = illegalState [A] ("The future is delayed.")
+    private def block () = throw new IllegalStateException ("The future is delayed.")
 
     // Start the computation and queue this continuation.
-    def get (k: Thunk [A]) = moveTo (new Running (k)) withEffect (run (f))
+    def get (k: Thunk [A]) = move (this, new Running (k)) (run (f))
 
     // The computation has not started, so it cannot have completed.
     def set (v: A) = block ()
@@ -65,18 +66,18 @@ private class Promise [A] (
     def this (k: Thunk [A], q: List [Thunk [A]]) = this (k :: q)
 
     // Queue this continuation.
-    def get (k: Thunk [A]) = moveTo (new Running (k, q)) withoutEffect
+    def get (k: Thunk [A]) = move (this, new Running (k, q)) (())
 
     // Store the result, resume the queued continuations.
-    def set (v: A) = moveTo (new Ready (v)) withEffect (for (k <- q) (k (v)))
+    def set (v: A) = move (this, new Ready (v)) (for (k <- q) (k (v)))
 
-    def fail (e: Throwable) = moveTo (new Failed (e)) withEffect (for (k <- q) (k.fail (e)))
+    def fail (e: Throwable) = move (this, new Failed (e)) (for (k <- q) (k.fail (e)))
   }
 
   // The computation has finished.
   private class Ready (v: A) extends State {
 
-    private def block [A] () = illegalState [A] ("The future is already set.")
+    private def block () = throw new IllegalStateException ("The future is already set.")
 
     // No need to wait; resume the continuation now.
     def get (k: Thunk [A]) = effect (k (v))
@@ -90,7 +91,7 @@ private class Promise [A] (
   // The computation has thrown an exception
   private class Failed (e: Throwable) extends State {
 
-    private def block [A] () = illegalState [A] ("The future is already set.")
+    private def block () = throw new IllegalStateException ("The future is already set.")
 
     // No need to wait; resume the continuation now.
     def get (k: Thunk [A]) = effect (k.fail (e))
@@ -111,9 +112,9 @@ private class Promise [A] (
           case e: Throwable => fail (e)
         }}}}
 
-  private def set (v: A): Unit = delegate (_.set (v))
+  private def set (v: A): Unit = delegate2 (_.set (v))
 
-  private def fail (e: Throwable): Unit = delegate (_.fail (e))
+  private def fail (e: Throwable): Unit = delegate2 (_.fail (e))
 
   /** The result of this computation.  This will suspend until the computation is complete; it will
     * throw the exception if the computation did, and rethrow it if called multiple times.  An
@@ -121,7 +122,7 @@ private class Promise [A] (
     * unless get is called.  To start a computation and ignore its result but allow exceptions to be
     * be seen by `handleUncaughException`, use `Scheduler.spawn`.
     */
-  def get: A @thunk = delegateT (_.get)
+  def get: A @thunk = suspend [A] (k => delegate2 (_.get (k)))
 
   def map [B] (f: A => B): Future [B] = Future.start (f (get))
   def flatMap [B] (f: A => Future [B]) = Future.start (f (get).get)

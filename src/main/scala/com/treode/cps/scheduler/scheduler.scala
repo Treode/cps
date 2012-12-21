@@ -28,20 +28,20 @@ extends AtomicState with Runnable {
   initialize (Suspended)
 
   protected trait State {
-    def run (): Behavior [Unit]
+    def run (): Option [Unit]
   }
 
-  def run (): Unit = delegate (_.run ())
+  def run (): Unit = delegate2 (_.run ())
 
   private def fail (m: String) =
     scheduler.handleUncaughtException (new IllegalStateException (m))
 
   private object Suspended extends State {
-    def run () = moveTo (Executed) withEffect (execute (scheduler, k))
+    def run () = move (this, Executed) (execute (scheduler, k))
   }
 
   private object Executed extends State {
-    def run () = moveTo (Executed) withEffect (fail ("Thump already executed"))
+    def run () = move (this, Executed) (fail ("Thump already executed"))
   }}
 
 private class FastThump (s: Scheduler, k: () => Any) extends Runnable {
@@ -51,34 +51,36 @@ private class FastThump (s: Scheduler, k: () => Any) extends Runnable {
 
 private class SafeThunk [A] (val scheduler: Scheduler, k: Either [Throwable, A] => Any)
 extends AtomicState with Thunk [A] {
+  import scheduler.spawn
 
   initialize (Suspended)
 
   protected [this] trait State {
-    def resume (v: A): Behavior [Unit]
-    def fail (e: Throwable): Behavior [Unit]
-    def flow (v: => A): Behavior [Unit]
-    def flowS (v: => A @thunk): Behavior [Unit]
+    def resume (v: A): Option [Unit]
+    def fail (e: Throwable): Option [Unit]
+    def flow (v: => A): Option [Unit]
+    def flowS (v: => A @thunk): Option [Unit]
   }
 
   private [this] object Suspended extends State {
 
     def resume (v: A) =
-      moveTo (Resumed) withEffect (scheduler.spawn (k (Right (v))))
+      move (this, Resumed) (spawn (k (Right (v))))
 
     def fail (e: Throwable) =
-      moveTo (Resumed) withEffect (scheduler.spawn (k (Left (e))))
+      move (this, Resumed) (spawn (k (Left (e))))
 
     def flow (v: => A) =
-      moveTo (Resumed) withEffect (catcher (scheduler, k, v))
+      move (this, Resumed) (catcher (scheduler, k, v))
 
     def flowS (v: => A @thunk) =
-      moveTo (Resumed) withEffect (catcherS (scheduler, k, v))
+      move (this, Resumed) (catcherS (scheduler, k, v))
   }
 
   private [this] object Resumed extends State {
-    private [this] val alreadyResumed: Behavior [Unit] =
-      illegalState ("Continuation already resumed.")
+
+    private [this] def alreadyResumed: Option [Unit] =
+      throw new IllegalStateException ("Continuation already resumed.")
 
     def resume (v: A) = alreadyResumed
     def fail (e: Throwable) = alreadyResumed
@@ -86,10 +88,10 @@ extends AtomicState with Thunk [A] {
     def flowS (v: => A @thunk) = alreadyResumed
   }
 
-  def apply (v: A): Unit = delegate (_.resume (v))
-  def fail (e: Throwable): Unit = delegate (_.fail (e))
-  def flow (v: => A): Unit = delegate (_.flow (v))
-  def flowS (v: => A @thunk): Unit = delegate (_.flowS (v))
+  def apply (v: A): Unit = delegate2 (_.resume (v))
+  def fail (e: Throwable): Unit = delegate2 (_.fail (e))
+  def flow (v: => A): Unit = delegate2 (_.flow (v))
+  def flowS (v: => A @thunk): Unit = delegate2 (_.flowS (v))
 }
 
 private class FastThunk [A] (s: Scheduler, k: Either [Throwable, A] => Any) extends Thunk [A] {
@@ -211,19 +213,17 @@ class Scheduler private [cps] (cfg: SchedulerConfig) {
 
   /** Pause this fiber and yield processing resources to another fiber.  This is the CPS analog to
     * `Thread.yield`, but `cede` is not a keyword of Scala.
-    *
-    * @param v The value to lift.
-    * @return The value annotated `@thunk`
     */
-  def cede (): Unit @thunk = suspend ((k: Unit => Unit) => k ())
+  def cede (): Unit @thunk = suspend [Unit] (_ ())
 
   /** Pause this fiber and yield processing resources to another fiber, and also lift the value
-    * into the `@thunk` tag.
+    * into the `@thunk` tag.  This is the CPS analog to `Thread.yield`, but `cede` is not a keyword
+    * of Scala.
     *
     * @param v The value to lift.
     * @return The value annotated `@thunk`
     */
-  def cede [A] (v: A): A @thunk = suspend ((k: A => Unit) => spawn (k (v)))
+  def cede [A] (v: A): A @thunk = suspend [A] (_ (v))
 
   /** Perform the task after a delay. */
   def schedule [A] (delay: Int, unit: TimeUnit = MILLISECONDS) (k: => A @thunk): Unit =

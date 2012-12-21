@@ -52,11 +52,11 @@ private object LockProperties extends CpsPropSpec {
         implicit val scheduler = withScheduler (TestScheduler.random (seed))
         import scheduler.{cede, spawn, suspend}
 
-        val lock = Lock()
+        val lock = Lock ()
         for (i <- 0 until m) {
           spawn {
-            lock.exclusive {
-              for (j <- (0 until n).cps) {
+            for (j <- (0 until n).cps) {
+              lock.exclusive {
                 log ((n * i + j).toString)
                 cede ()
               }}}}}}}
@@ -74,8 +74,8 @@ private object LockProperties extends CpsPropSpec {
       val lock = Lock ()
       for (i <- 0 until m) {
         spawn {
-          lock.exclusive {
-            for (j <- (0 until n).cps) {
+          for (j <- (0 until n).cps) {
+            lock.exclusive {
               log ((n * i + j).toString)
               cede ()
               latch.getAndDecrement

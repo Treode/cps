@@ -62,6 +62,7 @@ object SocketAddressStub {
 
 class SocketStub (protected implicit val scheduler: Scheduler)
 extends AbstractSocketStub with Socket {
+  import scheduler.suspend
 
   initialize (Unconnected)
 
@@ -70,69 +71,105 @@ extends AbstractSocketStub with Socket {
   private [this] def notYetConnected = new NotYetConnectedException
 
   protected [this] trait State extends AbstractSocketState {
-    def connect (remote: SocketAddress) (k: Thunk [Unit]): Behavior [Unit]
-    def remoteAddress: Behavior [Option [SocketAddress]]
-    def read (dst: ByteBuffer): SuspendableBehavior [Int]
-    def write (src: ByteBuffer): SuspendableBehavior [Int]
-    def connected (local: SocketAddress, remote: SocketAddress, output: Simplex, input: Simplex): Behavior [Unit] =
-      illegalState ("Cannot complete connect when not unconnected or connecting.")
+
+    def connect (remote: SocketAddress, k: Thunk [Unit]): Option [Unit]
+
+    def remoteAddress: Option [Option [SocketAddress]]
+
+    def read (dst: ByteBuffer, k: Thunk [Int]): Option [Unit]
+
+    def write (src: ByteBuffer, k: Thunk [Int]): Option [Unit]
+
+    def connected (local: SocketAddress, remote: SocketAddress, output: Simplex, input: Simplex): Option [Unit] =
+      throw new AssertionError ("Cannot complete connect when not unconnected or connecting.")
   }
 
   protected [this] object Unconnected extends AbstractUnconnectedState with State {
-    def close () = moveTo (ClosedByClose) withoutEffect
-    def connect (remote: SocketAddress) (k: Thunk [Unit]) =
+
+    def close () = move (this, ClosedByClose) (())
+
+    def connect (remote: SocketAddress, k: Thunk [Unit]) =
       remote match {
         case remote: SocketAddressStub =>
-          moveTo (new Connecting (k)) withEffect (remote.connect (SocketStub.this))
+          move (this, new Connecting (k)) (remote.connect (SocketStub.this))
         case _ =>
           effect (k.fail (unsupportedAddressType))
       }
+
     def remoteAddress = effect (None)
-    def read (dst: ByteBuffer) = tossS (notYetConnected)
-    def write (src: ByteBuffer) = tossS (notYetConnected)
+
+    def read (dst: ByteBuffer, k: Thunk [Int]) = effect (k.fail (notYetConnected))
+
+    def write (src: ByteBuffer, k: Thunk [Int]) = effect (k.fail (notYetConnected))
+
     override def connected (local: SocketAddress, remote: SocketAddress, output: Simplex, input: Simplex) =
-      moveTo (new Connected (local, remote, output, input)) withoutEffect
-    def shutdown () = moveTo (ClosedByShutdown) withoutEffect
+      move (this, new Connected (local, remote, output, input)) (())
+
+      def shutdown () = move (this, ClosedByShutdown) (())
   }
 
   protected [this] class Connecting (k: Thunk [Unit]) extends AbstractUnconnectedState with State {
-    def close () = moveTo (ClosedByClose) withEffect (k.fail (asyncClose))
-    def connect (remote: SocketAddress) (k: Thunk [Unit]) = effect (k.fail (connectionPending))
+
+    def close () = move (this, ClosedByClose) (k.fail (asyncClose))
+
+    def connect (remote: SocketAddress, k: Thunk [Unit]) = effect (k.fail (connectionPending))
+
     def remoteAddress = effect (None)
-    def read (dst: ByteBuffer) = tossS (notYetConnected)
-    def write (src: ByteBuffer) = tossS (notYetConnected)
+
+    def read (dst: ByteBuffer, k: Thunk [Int]) = effect (k.fail (notYetConnected))
+
+    def write (src: ByteBuffer, k: Thunk [Int]) = effect (k.fail (notYetConnected))
+
     override def connected (local: SocketAddress, remote: SocketAddress, output: Simplex, input: Simplex) =
-      moveTo (new Connected (local, remote, output, input)) withEffect (k ())
-    def shutdown () = moveTo (ClosedByShutdown) withEffect (k.fail (asyncClose))
+      move (this, new Connected (local, remote, output, input)) (k ())
+
+    def shutdown () = move (this, ClosedByShutdown) (k.fail (asyncClose))
   }
 
   protected [this] class Connected (local: SocketAddress, remote: SocketAddress, output: Simplex, input: Simplex)
   extends State {
-    def close () = moveTo (ClosedByClose) withoutEffect
+
+    def close () = move (this, ClosedByClose) (())
+
     def localAddress = effect (Some (local))
-    def connect (remote: SocketAddress) (k: Thunk [Unit]) = effect (k.fail (alreadyConnected))
+
+    def connect (remote: SocketAddress, k: Thunk [Unit]) = effect (k.fail (alreadyConnected))
+
     def remoteAddress = effect (Some (remote))
-    def read (dst: ByteBuffer) = effectS (input.read (dst))
-    def write (src: ByteBuffer) = effectS (output.write (src))
-    def shutdown () = moveTo (ClosedByShutdown) withoutEffect
+
+    def read (dst: ByteBuffer, k: Thunk [Int]) = effect (k.flowS (input.read (dst)))
+
+    def write (src: ByteBuffer, k: Thunk [Int]) = effect (k.flowS (output.write (src)))
+
+    def shutdown () = move (this, ClosedByShutdown) (())
   }
 
   private [this] trait AbstractClosed extends State {
-    def connect (remote: SocketAddress) (k: Thunk [Unit]) = effect (k.fail (closed))
-    def remoteAddress = toss (closed)
-    def read (dst: ByteBuffer) = tossS (closed)
-    def write (src: ByteBuffer) = tossS (closed)
+
+    def connect (remote: SocketAddress, k: Thunk [Unit]) = effect (k.fail (closed))
+
+    def remoteAddress = throw closed
+
+    def read (dst: ByteBuffer, k: Thunk [Int]) = effect (k.fail (closed))
+
+    def write (src: ByteBuffer, k: Thunk [Int]) = effect (k.fail (closed))
   }
   private [this] object ClosedByClose extends AbstractClosed with AbstractClosedByClose
   private [this] object ClosedByShutdown extends AbstractClosed with AbstractClosedByShutdown
 
   private [io] def connected (local: SocketAddress, remote: SocketAddress, output: Simplex, input: Simplex) =
-    delegate (_.connected (local, remote, output, input))
+    delegate2 (_.connected (local, remote, output, input))
 
-  def connect (remote: SocketAddress) = delegateT (_.connect (remote))
-  def remoteAddress = delegate (_.remoteAddress)
-  def read (dst: ByteBuffer) = delegateS (_.read (dst))
-  def write (src: ByteBuffer) = delegateS (_.write (src))
+  def connect (remote: SocketAddress) =
+    suspend [Unit] (k => delegate2 (_.connect (remote, k)))
+
+  def remoteAddress = delegate2 (_.remoteAddress)
+
+  def read (dst: ByteBuffer) =
+    suspend [Int] (k => delegate2 (_.read (dst, k)))
+
+  def write (src: ByteBuffer) =
+    suspend [Int] (k => delegate2 (_.write (src, k)))
 
   def read (dst: Array [ByteBuffer]): Long @thunk = {
     // CPS frustrates more idiomatic expressions

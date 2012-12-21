@@ -50,159 +50,38 @@ private [cps] trait AtomicState {
    */
   protected [this] final def initialize (s: State) = state.set (s)
 
-  /** Encapsulates the state transition and side effects of an operation. */
-  protected [this] trait Behavior [A] {
-    private [AtomicState] def execute (current: State): Option [A]
-  }
-
-  /** Encapsulates the state transition and side effects of an operation that is suspendable. */
-  protected [this] trait SuspendableBehavior [A] {
-    private [AtomicState] def execute (current: State, k: Thunk [A]): Boolean
-  }
-
-  /** Intermediate stage in specifying a behavior. */
-  private [sync] final class Move (next: State) {
-
-    /** If the move to the next state succeeds, perform no further action. */
-    def withoutEffect = new Behavior [Unit] {
-      private [AtomicState] def execute (current: State): Option [Unit] = {
-        if (state.compareAndSet (current, next)) Some (Unit) else None
-      }}
-
-    /** If the move to the next state succeeds, perform this action and return the result to the
-      * caller.  Another thread may have already changed the state since the move which yielded this
-      * effect.  You must take care to not depend on the current state being that state which led to
-      * this move nor the state this move set.
-      *
-      * @param action The action to perform.  @return The result of the action.
-      */
-    def withEffect [A] (action: => A) = new Behavior [A] {
-      private [AtomicState] def execute (current: State): Option [A] = {
-        if (state.compareAndSet (current, next)) Some (action) else None
-      }}
-
-    /** If the move to the next state succeeds, perform this suspendable action and return the
-      * result to the caller.  Another thread may have already changed the state since the move
-      * which yielded this effect.  You must take care to not depend on the current state being
-      * that state which led to this move nor the state this move set.
-      *
-      * @param action The action to perform.  @return The result of the action.
-      */
-    def withEffectS [A] (action: => A @thunk) = new SuspendableBehavior [A] {
-      private [AtomicState] def execute (current: State, k: Thunk [A]): Boolean = {
-        val r = state.compareAndSet (current, next)
-        if (r) scheduler.spawn (k (action))
-        r
-      }}}
-
-  /** Move to the given next state.  A move may fail if another thread changed the state already
-    * while this one formed this next state, in which case this next state will be discarded, and
-    * the operation will be retried in the new current state.  You must take care to not create any
-    * side effects assuming the move to this state was successful; instead follow this `withEffect`
-    * which will only be invoked if the move succeeded.
+  /** If the move to the next state succeeds, perform the action and return its result.  Another
+    * thread may have already changed the state since the move which yielded this effect.  You must
+    * take care to not depend on the current state being that state which led to this move nor the
+    * state this move set.
     *
-    * @param next The state to change to.
+    * @param now The current state, usually State.this
+    * @param next The next state, setting the next state may fail.
+    * @param action The action to perform if setting the next state passed.
+    * @return The result of that action.
     */
-  protected [this] final def moveTo (next: State) = new Move (next)
-
-  /** Perform an action and return the result to the caller, without moving to a new state.
-    *
-    * @param action The action to perform.
-    * @return The result of the action.
-    */
-  protected [this] final def effect [A] (action: => A) = new Behavior [A] {
-    private [AtomicState] def execute (current: State): Option [A] = {
+  def move [A] (now: State, next: State) (action: => A): Option [A] =
+    if (state.compareAndSet (now, next))
       Some (action)
-    }}
+    else
+      None
 
-  /** Perform a suspendable action and return the result to the caller, without moving to a new
-     * state.
-    *
-    * @param action The action to perform.
-    * @return The result of the action.
-    */
-  protected [this] final def effectS [A] (action: => A @thunk) = new SuspendableBehavior [A] {
-    private [AtomicState] def execute (current: State, k: Thunk [A]): Boolean = {
-      k.flowS (action)
-      true
-    }}
+  /** Yield a result based on the current state; this always succeeds. */
+  def effect [A] (result: A): Option [A] = Some (result)
 
-  /** Throw an exception.  Use this rather than `throw` directly, since the underlying
-    * implementation may do funky CPS tricks that could cause a `throw` to be caught in an
-    * unexpected place.
-    *
-    * @param e The exception to throw.
-    */
-  protected [this] final def toss [A] (e: => Throwable) = new Behavior [A] {
-    private [AtomicState] def execute (current: State): Option [A] = {
-      throw e
-    }}
-
-  /** Throw an exception.  Use this rather than `throw` directly, since the underlying
-     * implementation may do funky CPS tricks that could cause a `throw` to be caught in an
-     * unexpected place.
-     *
-     * @param e The exception to throw.
-     */
-  protected [this] final def tossS [A] (e: => Throwable) = new SuspendableBehavior [A] {
-    private [AtomicState] def execute (current: State, k: Thunk [A]): Boolean = {
-      k.fail (e)
-      true
-    }}
-
-  /** Block the attempt at the action by throwing an IllegalStateException.  Use this when the
-    * action is not permitted in the current state.
-    *
-    * @param message The message to include in the exception.
-    */
-  protected [this] final def illegalState [A] (message: String) =
-    toss [A] (new IllegalStateException (message))
-
-  /** There is an internal error; throw an AssertionError.
-    *
-    * @param message The message to include in the exception.
-    */
-  protected [this] final def assertionError [A] (message: String) =
-    toss [A] (new AssertionError (message))
-
-  /** Delegate an action to the current state.
+  /** Delegate an action to the current state.  If the method succeeds because no other thread
+    * changed in the meantime (that is, the method returns Some), return that result. If the method
+    * because some other thread did change the state (that is, the method returns None) then retry
+    * the method on the new state.
     *
     * @param method A function to fetch the move from the delegate.
     */
-  @tailrec
-  protected [this] final def delegate [A] (method: State => Behavior [A]): A = {
-    val current = state.get
-    // getOrElse hides tailcall from compiler
-    method (current) execute (current) match {
-      case Some (v) => v
-      case None => delegate (method)
-    }}
-
-  @tailrec
-  private def delegateS [A] (method: State => SuspendableBehavior [A], k: Thunk [A]): Unit = {
-    val current = state.get
-    if (!(method (current) execute (current, k))) delegateS (method, k)
+  def delegate2 [A] (method: State => Option [A]): A = {
+    var result = method (state.get)
+    while (result.isEmpty)
+      result = method (state.get)
+    result.get
   }
-
-  /** Delegate a suspendable action to the current state.
-    *
-    * @param method A function to fetch the move from the delegate.
-    */
-  protected [this] final def delegateS [A] (method: State => SuspendableBehavior [A]): A @thunk =
-    scheduler.suspend [A] (k => delegateS (method, k))
-
-  /** Capture the current continuation and then delegate an action to the current state.
-    *
-    * @param method A function to fetch the move from the delegate.
-    */
-  protected [this] final def delegateT [A] (method: State => Thunk [A] => Behavior [Unit]): A @thunk =
-    scheduler.suspend [A] (k => delegate (method (_) (k)))
-
-  /** Delegate to a reader of the current state.  The delegate method cannot change the state; it
-    * can only return a value computed from the current state.
-    */
-  protected [this] final def fetch [A] (method: State => A): A =
-    method (state.get)
 
   override def toString = state.get.toString
 }
