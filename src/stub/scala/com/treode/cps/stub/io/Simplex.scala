@@ -80,7 +80,7 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
         move (this, Empty) { r.k (r.n - r.i + w.i); w.k (w.n) }
       }}}
 
-  private [this] def deliver () = delegate2 (_.deliver ())
+  private [this] def deliver () = delegate (_.deliver ())
 
   private val min = 100
   private val max = 1000
@@ -90,12 +90,12 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
       // Our packet size for this time, somewhere between min and max.
       val r = random.nextInt (max + 1)
       val n = math.min (dst.remaining, math.max (min, r))
-      if (n == 0) k (0) else delegate2 (_.read (Point (dst, k, n, n)))
+      if (n == 0) k (0) else delegate (_.read (Point (dst, k, n, n)))
     }
 
   def write (src: ByteBuffer): Int @thunk =
     suspend { (k: Int => Unit) =>
       val r = random.nextInt (max + 1)
       val n = math.min (src.remaining, math.max (min, r))
-      if (n == 0) k (0) else delegate2 (_.write (Point (src, k, n, n)))
+      if (n == 0) k (0) else delegate (_.write (Point (src, k, n, n)))
     }}

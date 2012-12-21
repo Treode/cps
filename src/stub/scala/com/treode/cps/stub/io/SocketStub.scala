@@ -158,18 +158,18 @@ extends AbstractSocketStub with Socket {
   private [this] object ClosedByShutdown extends AbstractClosed with AbstractClosedByShutdown
 
   private [io] def connected (local: SocketAddress, remote: SocketAddress, output: Simplex, input: Simplex) =
-    delegate2 (_.connected (local, remote, output, input))
+    delegate (_.connected (local, remote, output, input))
 
   def connect (remote: SocketAddress) =
-    suspend [Unit] (k => delegate2 (_.connect (remote, k)))
+    suspend [Unit] (k => delegate (_.connect (remote, k)))
 
-  def remoteAddress = delegate2 (_.remoteAddress)
+  def remoteAddress = delegate (_.remoteAddress)
 
   def read (dst: ByteBuffer) =
-    suspend [Int] (k => delegate2 (_.read (dst, k)))
+    suspend [Int] (k => delegate (_.read (dst, k)))
 
   def write (src: ByteBuffer) =
-    suspend [Int] (k => delegate2 (_.write (src, k)))
+    suspend [Int] (k => delegate (_.write (src, k)))
 
   def read (dst: Array [ByteBuffer]): Long @thunk = {
     // CPS frustrates more idiomatic expressions

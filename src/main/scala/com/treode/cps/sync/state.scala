@@ -76,7 +76,7 @@ private [cps] trait AtomicState {
     *
     * @param method A function to fetch the move from the delegate.
     */
-  def delegate2 [A] (method: State => Option [A]): A = {
+  def delegate [A] (method: State => Option [A]): A = {
     var result = method (state.get)
     while (result.isEmpty)
       result = method (state.get)

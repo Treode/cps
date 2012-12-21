@@ -112,9 +112,9 @@ private class Promise [A] (
           case e: Throwable => fail (e)
         }}}}
 
-  private def set (v: A): Unit = delegate2 (_.set (v))
+  private def set (v: A): Unit = delegate (_.set (v))
 
-  private def fail (e: Throwable): Unit = delegate2 (_.fail (e))
+  private def fail (e: Throwable): Unit = delegate (_.fail (e))
 
   /** The result of this computation.  This will suspend until the computation is complete; it will
     * throw the exception if the computation did, and rethrow it if called multiple times.  An
@@ -122,7 +122,7 @@ private class Promise [A] (
     * unless get is called.  To start a computation and ignore its result but allow exceptions to be
     * be seen by `handleUncaughException`, use `Scheduler.spawn`.
     */
-  def get: A @thunk = suspend [A] (k => delegate2 (_.get (k)))
+  def get: A @thunk = suspend [A] (k => delegate (_.get (k)))
 
   def map [B] (f: A => B): Future [B] = Future.start (f (get))
   def flatMap [B] (f: A => Future [B]) = Future.start (f (get).get)

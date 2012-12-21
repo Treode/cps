@@ -31,7 +31,7 @@ extends AtomicState with Runnable {
     def run (): Option [Unit]
   }
 
-  def run (): Unit = delegate2 (_.run ())
+  def run (): Unit = delegate (_.run ())
 
   private def fail (m: String) =
     scheduler.handleUncaughtException (new IllegalStateException (m))
@@ -88,10 +88,10 @@ extends AtomicState with Thunk [A] {
     def flowS (v: => A @thunk) = alreadyResumed
   }
 
-  def apply (v: A): Unit = delegate2 (_.resume (v))
-  def fail (e: Throwable): Unit = delegate2 (_.fail (e))
-  def flow (v: => A): Unit = delegate2 (_.flow (v))
-  def flowS (v: => A @thunk): Unit = delegate2 (_.flowS (v))
+  def apply (v: A): Unit = delegate (_.resume (v))
+  def fail (e: Throwable): Unit = delegate (_.fail (e))
+  def flow (v: => A): Unit = delegate (_.flow (v))
+  def flowS (v: => A @thunk): Unit = delegate (_.flowS (v))
 }
 
 private class FastThunk [A] (s: Scheduler, k: Either [Throwable, A] => Any) extends Thunk [A] {

@@ -104,12 +104,12 @@ extends AbstractSocketStub with ServerSocket {
 
   private object ClosedByShutdown extends AbstractClosed with AbstractClosedByShutdown
 
-  private [io] def accepted () = delegate2 (_.accepted ())
+  private [io] def accepted () = delegate (_.accepted ())
 
-  def accept () = suspend [Socket] (k => delegate2 (_.accept (k)))
+  def accept () = suspend [Socket] (k => delegate (_.accept (k)))
 
   def bind (local: SocketAddress, backlog: Int = 0): this.type = {
-    delegate2 (_.bind (local, backlog))
+    delegate (_.bind (local, backlog))
     this
   }}
 

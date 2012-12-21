@@ -109,11 +109,11 @@ extends AtomicState with Lock {
       }}
 
   private [this] def acquire () =
-    suspend [Unit] (k => delegate2 (_.acquire (k)))
+    suspend [Unit] (k => delegate (_.acquire (k)))
 
-  private [this] def release () = delegate2 (_.release ())
+  private [this] def release () = delegate (_.release ())
 
-  private [this] def reverse (out: List [Unit => Unit]) = delegate2 (_.reverse (out))
+  private [this] def reverse (out: List [Unit => Unit]) = delegate (_.reverse (out))
 
   def exclusive [T] (f: => T @thunk): T @thunk = {
     acquire ()

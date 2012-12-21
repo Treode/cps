@@ -247,17 +247,17 @@ extends AtomicState with Mailbox [A] {
             MailboxImpl.this.reversed (mOut reverse_::: mIn, kOut reverse_::: kIn)
           }}}
 
-  private [this] def reversed (mOut: Msgs, kOut: Rcvrs) = delegate2 (_.reversed (mOut, kOut))
+  private [this] def reversed (mOut: Msgs, kOut: Rcvrs) = delegate (_.reversed (mOut, kOut))
 
-  private [this] def zipped (mOut: Msgs, kOut: Rcvrs) = delegate2 (_.zipped (mOut, kOut))
+  private [this] def zipped (mOut: Msgs, kOut: Rcvrs) = delegate (_.zipped (mOut, kOut))
 
-  def send (m: A): Unit = delegate2 (_.send (m))
+  def send (m: A): Unit = delegate (_.send (m))
 
   def receive (): A @thunk =
-    suspend [A] (k => delegate2 (_.receive (k)))
+    suspend [A] (k => delegate (_.receive (k)))
 
   def receiveAll (): List [A] @thunk =
-    suspend [List [A]] (k => delegate2 (_.receiveAll (k)))
+    suspend [List [A]] (k => delegate (_.receiveAll (k)))
 
   def loop (f: A => Any): Unit = spawn (while (true) f (receive ()))
 

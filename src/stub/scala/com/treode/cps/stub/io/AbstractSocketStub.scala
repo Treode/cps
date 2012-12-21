@@ -46,17 +46,17 @@ trait AbstractSocketStub extends NetworkChannel with AtomicState {
 
   protected type State <: AbstractSocketState
 
-  private [io] def shutdown () = delegate2 (_.shutdown ())
+  private [io] def shutdown () = delegate (_.shutdown ())
 
-  def close () = delegate2 (_.close ())
-  def isOpen = delegate2 (_.isOpen)
-  def localAddress = delegate2 (_.localAddress)
+  def close () = delegate (_.close ())
+  def isOpen = delegate (_.isOpen)
+  def localAddress = delegate (_.localAddress)
 
   /** The stack trace recording this socket's creation. */
   val createdAt = Thread.currentThread.getStackTrace
 
   /** Was this socket closed by `close` or system shutdown? */
-  def closedByShutdown = delegate2 (_.closedByShutdown)
+  def closedByShutdown = delegate (_.closedByShutdown)
 
   protected trait AbstractUnconnectedState extends AbstractSocketState {
     def localAddress = effect (None)
