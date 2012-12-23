@@ -18,7 +18,7 @@ package com.treode.cps.stub.io
 import java.nio.ByteBuffer
 import java.nio.channels._
 import scala.util.Random
-import com.treode.cps.thunk
+import com.treode.cps.{Thunk, thunk}
 import com.treode.cps.scheduler.Scheduler
 import com.treode.cps.sync.AtomicState
 
@@ -27,10 +27,12 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
 
   initialize (Empty)
 
+  private [this] val self: Simplex.this.type = this
+
   private [this] def readPending = throw new ReadPendingException
   private [this] def writePending = throw new WritePendingException
 
-  private [this] case class Point (buf: ByteBuffer, k: Int => Unit, n: Int, i: Int)
+  private [this] case class Point (buf: ByteBuffer, k: Thunk [Int], n: Int, i: Int)
 
   protected [this] trait State {
 
@@ -38,7 +40,9 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
 
     def write (w: Point): Option [Unit]
 
-    def deliver (): Option [Unit] =
+    def close (): Option [Unit]
+
+    def deliver (r: Point, w: Point): Option [Unit] =
       throw new AssertionError ("Cannot deliver when not delivering.")
   }
 
@@ -47,31 +51,38 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
     def read (r: Point) = move (this, new HaveReader (r)) (())
 
     def write (w: Point) = move (this, new HaveWriter (w)) (())
+
+    def close () = move (this, Closed) (())
   }
 
   private [this] class HaveReader (r: Point) extends State {
 
     def read (r: Point) = readPending
 
-    def write (w: Point) = move (this, new Delivering (r, w)) (Simplex.this.deliver ())
+    def write (w: Point) = move (this, Delivering) (self.deliver (r, w))
+
+    def close () = move (this, Closed) (r.k (-1))
   }
 
   private [this] class HaveWriter (w: Point) extends State {
 
-    def read (r: Point) = move (this, new Delivering (r, w)) (Simplex.this.deliver ())
+    def read (r: Point) = move (this, Delivering) (self.deliver (r, w))
 
     def write (w: Point) = writePending
+
+    def close () = move (this, Closed) (w.k (-1))
   }
 
-  private [this] class Delivering (r: Point, w: Point) extends State {
+  private [this] object Delivering extends State {
 
     def read (r: Point) = readPending
 
     def write (w: Point) = writePending
 
-    private def copy (n: Int) = for (i <- 1 to n) (r.buf.put (w.buf.get))
+    def close () = move (this, Closed) (())
 
-    override def deliver () = {
+    override def deliver (r: Point, w: Point) = {
+      def copy (n: Int) = for (i <- 1 to n) (r.buf.put (w.buf.get))
       if (r.i < w.i) {
         copy (r.i)
         move (this, new HaveWriter (Point (w.buf, w.k, w.n, w.i - r.i))) (r.k (r.n))
@@ -80,13 +91,28 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
         move (this, Empty) { r.k (r.n - r.i + w.i); w.k (w.n) }
       }}}
 
-  private [this] def deliver () = delegate (_.deliver ())
+  private [this] object Closed extends State {
+
+    def read (r: Point) = effect (r.k (-1))
+
+    def write (w: Point) = effect (w.k (-1))
+
+    override def deliver (r: Point, w: Point) =
+      effect {
+        r.k (-1)
+        w.k (-1)
+      }
+
+    def close () = effect (())
+  }
+
+  private def deliver (r: Point, w: Point) = delegate (_.deliver (r, w))
 
   private val min = 100
   private val max = 1000
 
   def read (dst: ByteBuffer): Int @thunk =
-    suspend { (k: Int => Unit) =>
+    suspend [Int] { k =>
       // Our packet size for this time, somewhere between min and max.
       val r = random.nextInt (max + 1)
       val n = math.min (dst.remaining, math.max (min, r))
@@ -94,8 +120,11 @@ private class Simplex (random: Random, val scheduler: Scheduler) extends AtomicS
     }
 
   def write (src: ByteBuffer): Int @thunk =
-    suspend { (k: Int => Unit) =>
+    suspend [Int] { k =>
       val r = random.nextInt (max + 1)
       val n = math.min (src.remaining, math.max (min, r))
       if (n == 0) k (0) else delegate (_.write (Point (src, k, n, n)))
-    }}
+    }
+
+  def close (): Unit = delegate (_.close())
+}

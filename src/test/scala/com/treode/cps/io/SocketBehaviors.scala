@@ -201,4 +201,27 @@ trait SocketBehaviors extends SocketChecks {
         interceptCps [ClosedChannelException] (s.write (ByteBuffer.allocate (16)))
       }
       kit.run (false)
+    }
+
+    it should "close a read when the peer closes" in {
+      val kit = factory ()
+      import kit.{newServerAddress, newServerSocket, newSocket}
+      import kit.scheduler.spawn
+
+      val s = newServerSocket ()
+      s.bind (newServerAddress ())
+      spawn {
+        val c = s.accept()
+        c.close()
+      }
+
+      var mark = false
+      spawn {
+        val c = newSocket
+        c.connect (s.localAddress.get)
+        expectResult (-1) (c.read (ByteBuffer.allocate (16)))
+        mark = true
+      }
+      kit.run (false)
+      assert (mark)
     }}}

@@ -129,7 +129,7 @@ extends AbstractSocketStub with Socket {
   protected [this] class Connected (local: SocketAddress, remote: SocketAddress, output: Simplex, input: Simplex)
   extends State {
 
-    def close () = move (this, ClosedByClose) (())
+    def close () = move (this, ClosedByClose) (output.close())
 
     def localAddress = effect (Some (local))
 
@@ -154,6 +154,7 @@ extends AbstractSocketStub with Socket {
 
     def write (src: ByteBuffer, k: Thunk [Int]) = effect (k.fail (closed))
   }
+
   private [this] object ClosedByClose extends AbstractClosed with AbstractClosedByClose
   private [this] object ClosedByShutdown extends AbstractClosed with AbstractClosedByShutdown
 
