@@ -53,8 +53,8 @@ package object cps {
   def cut [A] (v: A): A @thunk = shiftUnit [A, Unit, Unit] (v)
 
   /** The shift used throughout this CPS package, which is more limited than the fully generic
-     * shift from Scala's continuations.
-     */
+    * shift from Scala's continuations.
+    */
   def shift [A] (f: (A => Unit) => Any): A @thunk = _shift [A, Unit, Unit] (k => f (k))
 
   def whilst [A] (cond: => Boolean) (f: => A @thunk): CpsMonad [A] =

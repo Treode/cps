@@ -30,7 +30,7 @@ import com.treode.cps.scheduler.Scheduler
   * and operate in a multithreaded environment can extend this class to manage state transitions
   * safely.
   */
-private [cps] trait AtomicState {
+trait AtomicState {
 
   protected [this] val scheduler: Scheduler
 
@@ -39,7 +39,8 @@ private [cps] trait AtomicState {
     */
   protected [this] type State
 
-  private [sync] val state: AtomicReference [State] = new AtomicReference
+  // Visible for testing.
+  protected [this] val state: AtomicReference [State] = new AtomicReference
 
   // _Obviously_ one would introduce an abstract def to get the initial state, but then that
   // definition references any inputs for computing the initial state, and thereby prevents their
@@ -60,14 +61,14 @@ private [cps] trait AtomicState {
     * @param action The action to perform if setting the next state passed.
     * @return The result of that action.
     */
-  def move [A] (now: State, next: State) (action: => A): Option [A] =
+  protected def move [A] (now: State, next: State) (action: => A): Option [A] =
     if (state.compareAndSet (now, next))
       Some (action)
     else
       None
 
   /** Yield a result based on the current state; this always succeeds. */
-  def effect [A] (result: A): Option [A] = Some (result)
+  protected def effect [A] (result: A): Option [A] = Some (result)
 
   /** Delegate an action to the current state.  If the method succeeds because no other thread
     * changed in the meantime (that is, the method returns Some), return that result. If the method
@@ -76,7 +77,7 @@ private [cps] trait AtomicState {
     *
     * @param method A function to fetch the move from the delegate.
     */
-  def delegate [A] (method: State => Option [A]): A = {
+  protected def delegate [A] (method: State => Option [A]): A = {
     var result = method (state.get)
     while (result.isEmpty)
       result = method (state.get)
