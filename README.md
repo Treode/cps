@@ -24,7 +24,7 @@ repository and add CPS as a dependency:
       "treode-oss-releases",
       new URL ("http://treode.artifactoryonline.com/treode/oss-releases")) (Resolver.ivyStylePatterns)
 
-    libraryDependencies += "com.treode" %% "cps" % "0.2.0" % "compile;test->scalatest"
+    libraryDependencies += "com.treode" %% "cps" % "0.3.0" % "compile;test->scalatest"
 
 Browse the [Scaladoc online](http://treode.github.com/cps/).
 
