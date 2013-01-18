@@ -16,7 +16,6 @@
 package com.treode.cps.scheduler
 
 import org.scalatest.FlatSpec
-import org.scalatest.junit.JUnitRunner
 import com.treode.cps.stub.scheduler.TestScheduler
 
 class MultithreadedSpec extends FlatSpec with SchedulerBehaviors {

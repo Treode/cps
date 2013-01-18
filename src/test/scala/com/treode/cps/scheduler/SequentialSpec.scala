@@ -16,10 +16,13 @@
 package com.treode.cps.scheduler
 
 import org.scalatest.FlatSpec
-import org.scalatest.junit.JUnitRunner
 import com.treode.cps.stub.scheduler.TestScheduler
 
 class SequentialSpec extends FlatSpec with SchedulerBehaviors {
 
-  "A Scheduler with a sequential Executor" should behave like aScheduler (TestScheduler.sequential _)
-}
+  "A Scheduler with a sequential Executor" should behave like aScheduler (
+      () => TestScheduler.sequential())
+
+  it should "not run timers when they are turned off" in {
+    checkDoesNotRunTimersWhenTheyAreOff (TestScheduler.sequential (false))
+  }}

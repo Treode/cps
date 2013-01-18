@@ -39,7 +39,7 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
     }}
 
   "CpsConversions" should "support foreach" in {
-    val scheduler = TestScheduler.sequential
+    val scheduler = TestScheduler.sequential()
     import scheduler.spawn
 
     val q1 = mutable.Queue [Int] ()
@@ -55,7 +55,7 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
   }
 
   it should "run foreach on each element immediately" in {
-    val scheduler = TestScheduler.sequential
+    val scheduler = TestScheduler.sequential()
     import scheduler.spawn
 
     val s = new Shifter [Int]
@@ -74,7 +74,7 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
     }}
 
   it should "support map" in {
-    val scheduler = TestScheduler.sequential
+    val scheduler = TestScheduler.sequential()
     import scheduler.spawn
 
     val expected = 2 to 20 by 2
@@ -92,7 +92,7 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
   }
 
   it should "run map on each element immediately" in {
-    val scheduler = TestScheduler.sequential
+    val scheduler = TestScheduler.sequential()
     import scheduler.spawn
 
     val s = new Shifter [Int]
@@ -111,7 +111,7 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
     }}
 
   it should "support flatMap" in {
-    val scheduler = TestScheduler.sequential
+    val scheduler = TestScheduler.sequential()
     import scheduler.spawn
 
     val expected = (1 to 10) flatMap (_ to 10)
@@ -132,7 +132,7 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
   }
 
   it should "run flatMap over each nested element immediately" in {
-    val scheduler = TestScheduler.sequential
+    val scheduler = TestScheduler.sequential()
     import scheduler.spawn
 
     val s = new Shifter [Int]
@@ -152,7 +152,7 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
     }}
 
   it should "support filter" in {
-    val scheduler = TestScheduler.sequential
+    val scheduler = TestScheduler.sequential()
     import scheduler.spawn
 
     val expected = (1 to 10) filter (_ % 2 == 0)
@@ -173,7 +173,7 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
   }
 
   it should "filter each element immediately" in {
-    val scheduler = TestScheduler.sequential
+    val scheduler = TestScheduler.sequential()
     import scheduler.spawn
 
     val s = new Shifter [Int]
@@ -193,7 +193,7 @@ class CpsConversionsSpec extends FlatSpec with ShouldMatchers {
       }}}
 
   it should "support repeating methods" in {
-    val scheduler = TestScheduler.sequential
+    val scheduler = TestScheduler.sequential()
     import scheduler.spawn
 
     spawn {

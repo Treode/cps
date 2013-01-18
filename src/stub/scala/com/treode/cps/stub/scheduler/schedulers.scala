@@ -34,12 +34,17 @@ class TestScheduler private [scheduler] (cfg: TestSchedulerConfig) extends Sched
 }
 
 /** Run one task at a time in one thread, choosing the task first in first out. */
-private class SequentialConfig extends TestSchedulerConfig {
+private class SequentialConfig (timers: Boolean) extends TestSchedulerConfig {
 
   private [this] var exception = None: Option [Throwable]
 
-  val timer = ExecutorStub.newSequentialExecutor
-  val executor = timer
+  private val stub =
+    if (timers)
+      new SequentialStub with TimerfulStub
+    else
+      new SequentialStub with TimerlessStub
+  val timer = stub
+  val executor = stub
 
   def handleUncaughtException (e: Throwable)  =  exception = Some (e)
 
@@ -61,14 +66,19 @@ private class SequentialConfig extends TestSchedulerConfig {
 }
 
 /** Run one task at a time in one thread, choosing the task randomly. */
-private class RandomConfig (r: Random) extends TestSchedulerConfig {
+private class RandomConfig (r: Random, timers: Boolean) extends TestSchedulerConfig {
 
   private [this] var exception = None: Option [Throwable]
 
   val random = r
 
-  val timer = ExecutorStub.newRandomExecutor (random)
-  val executor = timer
+  private val stub =
+    if (timers)
+      new RandomStub (random) with TimerfulStub
+    else
+      new RandomStub (random) with TimerlessStub
+  val timer = stub
+  val executor = stub
 
   def handleUncaughtException (e: Throwable)  =  exception = Some (e)
 
@@ -128,14 +138,29 @@ private class MultithreadedConfig (cond: => Boolean) extends TestSchedulerConfig
 
 object TestScheduler {
 
-  def sequential (): TestScheduler =
-    new TestScheduler (new SequentialConfig)
+  /** A single-threaded scheduler that selects tasks in FIFO order; if timers is false then tasks
+    * submitted via `schedule` will be ignored.
+    */
+  def sequential (timers: Boolean = true): TestScheduler =
+    new TestScheduler (new SequentialConfig (timers))
 
+  /** A single-threaded scheduler that selects tasks in psuedo-random order; if timers is false
+    * then tasks submitted via `schedule` will be ignored.
+    */
   def random (seed: Long): TestScheduler =
-    new TestScheduler (new RandomConfig (new Random (seed)))
+    new TestScheduler (new RandomConfig (new Random (seed), true))
 
-  def random (random: Random = Random): TestScheduler =
-    new TestScheduler (new RandomConfig (random))
+  /** A single-threaded scheduler that selects tasks in psuedo-random order; if timers is false
+    * then tasks submitted via `schedule` will be ignored.
+    */
+  def random (seed: Long, timers: Boolean): TestScheduler =
+    new TestScheduler (new RandomConfig (new Random (seed), timers))
+
+  /** A single-threaded scheduler that selects tasks in psuedo-random order; if timers is false
+    * then tasks submitted via `schedule` will be ignored.
+    */
+  def random (random: Random = Random, timers: Boolean = true): TestScheduler =
+    new TestScheduler (new RandomConfig (random, timers))
 
   /** By default, run until the condition is false, that is use `cond` for `run()`. */
   def multithreaded (cond: => Boolean): TestScheduler =

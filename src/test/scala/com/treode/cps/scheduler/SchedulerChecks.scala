@@ -41,10 +41,19 @@ trait SchedulerChecks extends Assertions {
     import scheduler.schedule
 
     val n = 12
-    var v = Vector.fill (n) (new AtomicInteger (0)) // Track timers
+    val v = Vector.fill (n) (new AtomicInteger (0)) // Track timers
     for (i <- 0 to n-1) (schedule (i, MILLISECONDS) (v (i).addAndGet (i))) // Add to detect double runs
     scheduler.run ()
     for (i <- 0 to n-1) (expectResult (i) (v (i).get)) // Did each run once?
+  }
+
+  protected [this] def checkDoesNotRunTimersWhenTheyAreOff (scheduler: TestScheduler) {
+    import scheduler.schedule
+
+    val v = new AtomicInteger (0)
+    schedule (1, MILLISECONDS) (v.addAndGet (1))
+    scheduler.run ()
+    expectResult (0) (v.get)
   }
 
   def checkRunsNestedTasks (factory: () => TestScheduler) {

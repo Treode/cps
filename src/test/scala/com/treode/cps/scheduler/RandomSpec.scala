@@ -15,15 +15,20 @@
 
 package com.treode.cps.scheduler
 
-import java.util.concurrent.TimeUnit.MILLISECONDS
 import scala.util.Random
-import org.scalatest.PropSpec
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.prop.PropertyChecks
+import org.scalatest.{FlatSpec, Specs}
 import com.treode.cps.scalatest.CpsPropSpec
 import com.treode.cps.stub.scheduler.TestScheduler
 
-class RandomSpec extends CpsPropSpec with SchedulerProperties {
+class RandomSpec extends Specs (RandomBehaviors, RandomProperties)
+
+object RandomBehaviors extends FlatSpec with SchedulerChecks {
+
+  "A RandomScheduler" should "not run timers when they are turned off" in {
+    checkDoesNotRunTimersWhenTheyAreOff (TestScheduler.random (0, false))
+  }}
+
+object RandomProperties extends CpsPropSpec with SchedulerProperties {
 
   def name = "RandomScheduler"
 
