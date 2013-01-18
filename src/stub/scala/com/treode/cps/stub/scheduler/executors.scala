@@ -16,8 +16,7 @@
 package com.treode.cps.stub.scheduler
 
 import java.util.{Collection => JCollection, List => JList}
-import java.util.concurrent.{Future => JFuture, Callable, ScheduledExecutorService,
-  ScheduledFuture, TimeUnit}
+import java.util.concurrent.{Future => JFuture, Callable, ScheduledExecutorService, ScheduledFuture, TimeUnit}
 import scala.collection.mutable
 import scala.util.Random
 
@@ -42,8 +41,7 @@ trait ExecutorStub extends ScheduledExecutorService {
   // If the user requests a delay of two hours, but there are not two hours worth of immediate
   // activities, we jump in time to trigger the delayed tasks sooner.  This tracks the running
   // total of jumps, which is then added to new tasks.
-  private [this] var timejump = 0L
-  private def time = System.currentTimeMillis + timejump
+  private [this] var time = 0L
 
   /** False if the subclass has no tasks to execute immediately. */
   protected def isQuietNow: Boolean
@@ -58,14 +56,16 @@ trait ExecutorStub extends ScheduledExecutorService {
   def executeOne() {
     if (timers.headOption exists (_.trigger < time)) {
       // A timer has triggered, move its task to the immediate queue.
+      time += 1
       execute (timers.dequeue.r)
     } else if (isQuietNow) {
       // There's no immediate task, jump time to that of the next scheduled task.
       val t = timers.dequeue
-      timejump = math.max (timejump, t.trigger - time)
+      time = t.trigger + 1
       execute (t.r)
     } else {
       // Execute the next immediate task.
+      time += 1
       executeOneNow()
     }}
 
