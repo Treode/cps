@@ -13,12 +13,11 @@
  * limitations under the License.
  */
 
-package com.treode.cps.scheduler
+package com.treode.cps.stub.scheduler
 
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import org.scalatest.Assertions
-import com.treode.cps.stub.scheduler.TestScheduler
 
 trait SchedulerChecks extends Assertions {
 

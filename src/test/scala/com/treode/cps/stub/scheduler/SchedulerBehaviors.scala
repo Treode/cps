@@ -13,13 +13,22 @@
  * limitations under the License.
  */
 
-package com.treode.cps.scheduler
+package com.treode.cps.stub.scheduler
 
 import org.scalatest.FlatSpec
-import com.treode.cps.stub.scheduler.TestScheduler
 
-class MultithreadedSpec extends FlatSpec with SchedulerBehaviors {
+trait SchedulerBehaviors extends SchedulerChecks {
+  this: FlatSpec =>
 
-  "A Scheduler with a ForkJoinPool" should behave like aScheduler (
-      () => TestScheduler.multithreaded (false))
-}
+  def aScheduler (factory: () => TestScheduler) = {
+    it should "run each task exactly once" in {
+      checkRunsEachTaskExactlyOnce (factory)
+    }
+
+    it should "run nested tasks" in {
+      checkRunsNestedTasks (factory)
+    }
+
+    it should "run each timer exactly once" in {
+      checkRunsEachTimerExactlyOnce (factory)
+    }}}

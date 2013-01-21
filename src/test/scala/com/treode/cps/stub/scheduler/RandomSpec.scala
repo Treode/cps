@@ -13,27 +13,24 @@
  * limitations under the License.
  */
 
-package com.treode.cps.scheduler
+package com.treode.cps.stub.scheduler
 
+import scala.util.Random
+import org.scalatest.{FlatSpec, Specs}
 import com.treode.cps.scalatest.CpsPropSpec
-import com.treode.cps.stub.scheduler.TestScheduler
 
-private [cps] trait SchedulerProperties extends SchedulerChecks {
-  this: CpsPropSpec =>
+class RandomSpec extends Specs (RandomBehaviors, RandomProperties)
 
-  def name: String
-  def factory (seed: Long): () => TestScheduler
+object RandomBehaviors extends FlatSpec with SchedulerChecks {
 
-  property ("A " + name + " runs each task exactly once") {
-    forAll ("seed") { seed: Int =>
-      try {
-      checkRunsEachTaskExactlyOnce (factory (seed))
-      } catch {
-        case e: Throwable => e.printStackTrace()
-      }
-    }}
+  "A RandomScheduler" should "not run timers when they are turned off" in {
+    checkDoesNotRunTimersWhenTheyAreOff (TestScheduler.random (0, false))
+  }}
 
-  property ("A " + name + " runs nested tasks") {
-    forAll (seeds) { seed: Long =>
-      checkRunsNestedTasks (factory (seed))
-    }}}
+object RandomProperties extends CpsPropSpec with SchedulerProperties {
+
+  def name = "RandomScheduler"
+
+  def factory (seed: Long) = {
+    () => TestScheduler.random (seed)
+  }}
