@@ -3,9 +3,13 @@ package com.treode.cps.stub.scheduler
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.{ForkJoinPool, ScheduledThreadPoolExecutor}
 import scala.util.Random
+import scala.util.continuations.reset
+import com.treode.cps.thunk
 import com.treode.cps.scheduler.{Scheduler, SchedulerConfig}
 
 private trait TestSchedulerConfig extends SchedulerConfig {
+
+  def await [A] (s: TestScheduler, k: => A @thunk): A
 
   /** Run until the condition is false; this keeps the system going through quiet periods waiting
     * for responses on sockets, timers to expire and so on.
@@ -17,6 +21,10 @@ private trait TestSchedulerConfig extends SchedulerConfig {
 }
 
 class TestScheduler private [scheduler] (cfg: TestSchedulerConfig) extends Scheduler (cfg) {
+
+  override def await [A] (k: => A @thunk): A = cfg.await (this, k)
+
+  def _await [A] (k: => A @thunk): A = super.await (k)
 
   /** In multithreaded mode, run until the condition is false; this keeps the system going through
     * quiet periods waiting for responses on sockets, timers to expire and so on.  In single
@@ -54,6 +62,16 @@ private class SequentialConfig (timers: Boolean) extends TestSchedulerConfig {
   def makeThunk [A] (s: Scheduler, k: Either [Throwable, A] => Any) =
     SchedulerConfig.makeSafeThunk (s, k)
 
+  def await [A] (s: TestScheduler, k: => A @thunk): A = {
+    var v: A = null .asInstanceOf [A]
+    reset {
+      val _t1 = k
+      v = _t1
+    }
+    run (v == null)
+    v
+  }
+
   def run (cond: => Boolean) {
     while (exception == None && !executor.isQuiet)
       executor.executeOne()
@@ -88,6 +106,16 @@ private class RandomConfig (r: Random, timers: Boolean) extends TestSchedulerCon
   def makeThunk [A] (s: Scheduler, k: Either [Throwable, A] => Any) =
     SchedulerConfig.makeSafeThunk (s, k)
 
+  def await [A] (s: TestScheduler, k: => A @thunk): A = {
+    var v: A = null .asInstanceOf [A]
+    reset {
+      val _t1 = k
+      v = _t1
+    }
+    run (v == null)
+    v
+  }
+
   def run (cond: => Boolean) {
     while (exception == None && !executor.isQuiet)
       executor.executeOne()
@@ -119,6 +147,8 @@ private class MultithreadedConfig (cond: => Boolean) extends TestSchedulerConfig
 
   def makeThunk [A] (s: Scheduler, k: Either [Throwable, A] => Any) =
     SchedulerConfig.makeSafeThunk (s, k)
+
+  def await [A] (s: TestScheduler, k: => A @thunk): A = s._await (k)
 
   def run (cond: => Boolean) {
     Thread.sleep (100)

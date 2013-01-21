@@ -18,6 +18,7 @@ package com.treode.cps.stub.scheduler
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import org.scalatest.Assertions
+import com.treode.cps.sync.Mailbox
 
 trait SchedulerChecks extends Assertions {
 
@@ -83,4 +84,14 @@ trait SchedulerChecks extends Assertions {
         expectResult (i*n + j) (v2 (i) (j).get ())
         for (k <- 0 to n-1) {
           expectResult (i*n*n + j * n+k) (v3 (i) (j) (k).get ())
-        }}}}}
+        }}}}
+
+  def checkAwaitsTaskInThread (factory: () => TestScheduler) {
+    implicit val scheduler = factory ()
+    import scheduler.await
+
+    val mbx = Mailbox [Int] ()
+    mbx.send (3)
+    val x = await (mbx.receive())
+    expectResult (3) (x)
+  }}

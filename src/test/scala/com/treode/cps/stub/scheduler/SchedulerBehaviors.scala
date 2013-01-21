@@ -31,4 +31,8 @@ trait SchedulerBehaviors extends SchedulerChecks {
 
     it should "run each timer exactly once" in {
       checkRunsEachTimerExactlyOnce (factory)
+    }
+
+    it should "await CPS tasks in a thread" in {
+      checkAwaitsTaskInThread (factory)
     }}}

@@ -237,8 +237,8 @@ class Scheduler private [cps] (cfg: SchedulerConfig) {
     * `Mailbox.send`. To retrieve a value from the CPS system into a traditional threaded system,
     * use this method.
     */
-  def await [T] (k: => T @thunk): T = {
-      val q = new java.util.concurrent.SynchronousQueue [Either [Throwable, T]]
+  def await [A] (k: => A @thunk): A = {
+      val q = new java.util.concurrent.SynchronousQueue [Either [Throwable, A]]
       spawn (q.put (catcherK (k)))
       q.take() match {
         case Right (v) => v

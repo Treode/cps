@@ -25,6 +25,10 @@ object RandomBehaviors extends FlatSpec with SchedulerChecks {
 
   "A RandomScheduler" should "not run timers when they are turned off" in {
     checkDoesNotRunTimersWhenTheyAreOff (TestScheduler.random (0, false))
+  }
+
+  it should "await CPS tasks in a thread" in {
+    checkAwaitsTaskInThread (() => TestScheduler.random (0, true))
   }}
 
 object RandomProperties extends CpsPropSpec with SchedulerProperties {
