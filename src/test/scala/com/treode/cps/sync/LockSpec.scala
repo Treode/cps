@@ -43,26 +43,25 @@ private object LockBehaviors extends CpsFlatSpec {
 private object LockProperties extends CpsPropSpec {
 
   property ("A lock runs each critical section once atomically with the random scheduler") {
-    forAll (seeds) { seed: Long =>
-      withWrappers {
-        val m = 17
-        val n = 11
-        val log = withLog ((0 until m * n) map (_.toString): _*)
+    forAllS (seeds) { seed: Long =>
+      val m = 17
+      val n = 11
+      val log = withLog ((0 until m * n) map (_.toString): _*)
 
-        implicit val scheduler = withScheduler (TestScheduler.random (seed))
-        import scheduler.{cede, spawn, suspend}
+      implicit val scheduler = withScheduler (TestScheduler.random (seed))
+      import scheduler.{cede, spawn, suspend}
 
-        val lock = Lock ()
-        for (i <- 0 until m) {
-          spawn {
-            for (j <- (0 until n).cps) {
-              lock.exclusive {
-                log ((n * i + j).toString)
-                cede ()
-              }}}}}}}
+      val lock = Lock ()
+      for (i <- 0 until m) {
+        spawn {
+          for (j <- (0 until n).cps) {
+            lock.exclusive {
+              log ((n * i + j).toString)
+              cede ()
+            }}}}}}
 
   property ("A lock runs each critical section once atomically with the multithreaded scheduler") {
-    withWrappers {
+    resetTest {
       val m = 43
       val n = 37
       val latch = new AtomicInteger (m * n)

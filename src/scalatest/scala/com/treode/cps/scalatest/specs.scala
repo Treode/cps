@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.util.continuations.reset
-import org.scalacheck.Gen
+import org.scalacheck.{Gen, Prop, Pretty, Shrink}
 import org.scalatest.{Assertions, FlatSpec, PropSpec}
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.verb.ResultOfStringPassedToVerb
@@ -51,7 +51,11 @@ trait CpsSpecTools extends Assertions {
         e .asInstanceOf [A]
     }}
 
-  def withWrappers (ctx: => Any @thunk): Unit = reset { ctx; () }
+  def resetTest (k: => Any @thunk) {
+    reset {
+      k
+      ()
+    }}
 
   def wrapRun [A] (k: => A @thunk) (implicit scheduler: TestScheduler): A = {
     var finished = false
@@ -92,20 +96,16 @@ trait CpsFlatSpec extends FlatSpec with CpsSpecTools {
 
   protected final class DuringForString (v: ResultOfStringPassedToVerb) {
     def during (ctx: => Any @thunk) =
-      v in {
-        withWrappers {
-          ctx
-        }}}
+      v in (resetTest (ctx))
+  }
 
   implicit def duringForString (v: ResultOfStringPassedToVerb): DuringForString =
     new DuringForString (v)
 
   protected final class DuringForIt (v: ItVerbString) {
     def during (ctx: => Any @thunk) =
-      v in {
-        withWrappers {
-          ctx
-        }}}
+      v in (resetTest (ctx))
+  }
 
   implicit def duringForIt (v: ItVerbString): DuringForIt =
     new DuringForIt (v)
@@ -114,4 +114,8 @@ trait CpsFlatSpec extends FlatSpec with CpsSpecTools {
 trait CpsPropSpec extends PropSpec with PropertyChecks with CpsSpecTools {
 
   val seeds = Gen.choose (0L, Long.MaxValue)
+
+  def forAllS [A] (ga: Gen [A]) (f: A => Unit @thunk) (
+      implicit cfg: PropertyCheckConfig, sa: Shrink [A]): Unit =
+    forAll (ga) (a => resetTest (f (a))) (cfg, sa)
 }
