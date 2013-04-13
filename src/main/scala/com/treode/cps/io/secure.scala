@@ -154,15 +154,20 @@ private class SecureSocketLive (socket: Socket, engine: SSLEngine) (
     }
 
     def unwrap(): Unit @thunk = {
-      val status = inLock.exclusive {
+      val unwrapped = inLock.exclusive {
         if (appIn.hasRemaining) {
           transfer (dst)
+          false
         } else {
           var more = _unwrap (false)
           while (more || engine.getHandshakeStatus == NEED_UNWRAP)
             more = _unwrap (more)
+            true
         }}
-      handshake()
+      if (unwrapped)
+        handshake()
+      else
+        cut()
     }
 
     def wrap(): Unit @thunk = {
