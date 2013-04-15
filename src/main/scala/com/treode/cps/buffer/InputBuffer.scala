@@ -33,8 +33,8 @@ trait InputBuffer extends ReadableBuffer {
     if (n < min) fill (min - n) else cut (0)
   }
 
-  private [this] def isCr (c: Byte) = (c == '\r')
-  private [this] def isLf (c: Byte) = (c == '\n')
+  private [this] def isCr (c: Int) = (c == '\r')
+  private [this] def isLf (c: Int) = (c == '\n')
 
   // To use a regular expression, we would need to convert the ByteBuffer to a String, and we don't
   // want to waste CPU on that. This implements a DFA to search for [CR]LF [CR]LF in a ByteBuffer.
@@ -46,10 +46,10 @@ trait InputBuffer extends ReadableBuffer {
     while (n >= 0) {
       pos = n
       var i = pos + 1
-      if (i < writeAt && isCr (getByte (i)))
+      if (i < writeAt && isCr (getByteNRW (i)))
         i += 1
       if (i < writeAt) {
-        if (isLf (getByte (i))) {
+        if (isLf (getByteNRW (i))) {
           i += 1
           return (i, true)
         }
