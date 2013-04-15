@@ -35,30 +35,20 @@ object CpsBuild extends Build {
   Seq (
     organization := "com.treode",
     name := "cps",
-    version := "0.4.0-SNAPSHOT",
-    scalaVersion := "2.9.2",
+    version := "0.4.0",
+    scalaVersion := "2.9.3",
 
-    addCompilerPlugin ("org.scala-lang.plugins" % "continuations" % "2.9.2"),
+    addCompilerPlugin ("org.scala-lang.plugins" % "continuations" % "2.9.3"),
     scalacOptions ++= Seq ("-P:continuations:enable", "-deprecation"),
 
     libraryDependencies ++= Seq (
-      "org.scalatest" %% "scalatest" % "2.0.M4" % "scalatest;test",
-      "org.scalacheck" %% "scalacheck" % "1.9" % "scalatest;test"),
+      "org.scalatest" %% "scalatest" % "2.0.M5b" % "scalatest;test",
+      "org.scalacheck" %% "scalacheck" % "1.10.1" % "scalatest;test"),
 
     publishArtifact in Stub := true,
     publishArtifact in ScalaTest := true,
     publishArtifact in Test := false,
-    publishMavenStyle := false,
-
-    publishTo <<= (version) { version: String =>
-      val treode = "http://treode.artifactoryonline.com/treode/"
-      val (name, url) =
-        if (version.contains ("-SNAPSHOT"))
-          ("oss-snapshots", treode + "oss-snapshots")
-        else
-          ("oss-releases", treode + "oss-releases")
-      Some (Resolver.url (name, new URL (url)) (Resolver.ivyStylePatterns))
-    })
+    publishMavenStyle := false)
 
   lazy val root = Project ("root", file ("."))
     .configs (Stub, ScalaTest, Test)

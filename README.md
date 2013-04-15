@@ -1,7 +1,7 @@
 # CPS Wrappers for Java Asynchronous IO
 
-The Treode CPS library wraps Java7's asynchronous sockets and files with Scala's continuations.  You
-can write readable code without gnarly callbacks:
+The Treode CPS IO library wraps Java7's asynchronous sockets and files with Scala's continuations.
+You can write readable code without gnarly callbacks:
 
     val address = new InetSocketAddress ("0.0.0.0", 4567)
     val client = newSocket
@@ -21,14 +21,22 @@ To use the library, and to include the testing stubs in your tests only, add the
 repository and add CPS as a dependency:
 
     resolvers += Resolver.url (
-      "treode-oss-releases",
-      new URL ("http://treode.artifactoryonline.com/treode/oss-releases")) (Resolver.ivyStylePatterns)
+      "treode-oss",
+      new URL ("https://oss.treode.com/ivy")) (Resolver.ivyStylePatterns)
 
-    libraryDependencies += "com.treode" %% "cps" % "0.3.0" % "compile;test->scalatest"
+    libraryDependencies += "com.treode" %% "cps" % "0.4.0" % "compile;test->scalatest"
 
-Browse the [Scaladoc online](http://treode.github.com/cps/).
+You also need to setup SBT with the continuations plugin and activate it:
+
+    addCompilerPlugin ("org.scala-lang.plugins" % "continuations" % "2.9.3"),
+    scalacOptions ++= Seq ("-P:continuations:enable"),
+
+Unfortunately, the CPS IO library cannot be used in Scala 2.10.x due to [Bug
+6817](https://issues.scala-lang.org/browse/SI-6817).
+
+Browse the [Scaladoc online](http://oss.treode.com/docs/scala/cps/0.4.0).
 
 Browse or subscribe to the [online forum](https://groups.google.com/forum/#!forum/scala-cps-io).
 
-For working client and server applications, see the
-[CPS Example](https://github.com/Treode/cps-example).
+For working client and server applications, see the [CPS IO
+Example](https://github.com/Treode/cps-example).
