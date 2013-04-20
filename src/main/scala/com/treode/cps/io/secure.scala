@@ -66,10 +66,10 @@ private class SecureSocketLive (socket: Socket, engine: SSLEngine) (
   private [this] def flush (src: ByteBuffer) = {
     src.flip ()
     var n = 0
-    while (src.hasRemaining && n >= 0) {
+    while (src.hasRemaining && n >= 0)
       n = socket.write (src)
-    }
-    if (n >= 0)  src.compact ()
+    if (n >= 0)
+      src.compact ()
   }
 
   /** Copy as much as possible from appIn to dst buffer. */
@@ -127,8 +127,14 @@ private class SecureSocketLive (socket: Socket, engine: SSLEngine) (
     }
 
     def _unwrap (more: Boolean) = {
-      var n = if (netIn.position == 0 || more) socket.read (netIn) else cut (0)
-      if (n < 0) engine.closeInbound ()
+      var n =
+        if (netIn.position == 0 || more)
+          socket.read (netIn)
+        else
+          cut (0)
+      if (n < 0)
+        engine.closeInbound ()
+
       netIn.flip ()
       unflip (appIn)
       val res = engine.unwrap (netIn, appIn)
@@ -218,7 +224,10 @@ private class SecureSocketLive (socket: Socket, engine: SSLEngine) (
     val m = total (dst)
     new Op (Array (), dst) .unwrap()
     val n = total (dst) - m
-    if (n == 0 && !socket.isOpen) -1 else n
+    if (n == 0 && (engine.isInboundDone || !socket.isOpen))
+      -1
+    else
+      n
   }
 
   def read (dst: ByteBuffer): Int @thunk = _read (Array (dst))
