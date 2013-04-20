@@ -35,7 +35,7 @@ object CpsBuild extends Build {
   Seq (
     organization := "com.treode",
     name := "cps",
-    version := "0.4.0",
+    version := "0.5.0-SNAPSHOT",
     scalaVersion := "2.9.3",
 
     addCompilerPlugin ("org.scala-lang.plugins" % "continuations" % "2.9.3"),

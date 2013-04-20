@@ -166,13 +166,6 @@ private final class PagedBuffer private [buffer] (
     pages (pageOf (adj)) (pageIndexOf (adj))
   }
 
-  def getByteNRW (index: Int): Int = {
-    if (index < 0) throw new IndexOutOfBoundsException
-    val adj = index + offset
-    if (adj > _writeAt) throw new IndexOutOfBoundsException
-    pages (pageOf (adj)) (pageIndexOf (adj))
-  }
-
   def getBytes (srcoff: Int, dst: Array [Byte], dstoff: Int, len: Int) {
     val index = pageIndexOf (srcoff + offset)
     val rest = pageSize - index
@@ -192,13 +185,6 @@ private final class PagedBuffer private [buffer] (
   }
 
   def readByte (): Byte = {
-    if (_readAt >= _writeAt) throw new IndexOutOfBoundsException
-    val byte = pages (pageOf (_readAt)) (pageIndexOf (_readAt))
-    _readAt += 1
-    byte
-  }
-
-  def readByteNRW (): Int = {
     if (_readAt >= _writeAt) throw new IndexOutOfBoundsException
     val byte = pages (pageOf (_readAt)) (pageIndexOf (_readAt))
     _readAt += 1

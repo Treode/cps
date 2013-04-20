@@ -51,12 +51,6 @@ trait ReadableBuffer extends ReadableStream {
   /** Get the next byte at `readAt` and increment the read position. */
   def readByte (): Byte
 
-  /** NewRelic Workaround (NRW) */
-  def getByteNRW (index: Int): Int
-
-  /** NewRelic Workaround (NRW) */
-  def readByteNRW (): Int
-
   /** Get the next `length` byte at `readAt` and advance the read position. */
   def readBytes (bytes: Array [Byte], offset: Int, length: Int)
 }
@@ -79,9 +73,6 @@ private trait ReadableBufferEnvoy extends ReadableBuffer {
   def readByte () = buffer.readByte ()
   def readBytes (bytes: Array [Byte], offset: Int, length: Int) =
     buffer.readBytes (bytes, offset, length)
-
-  def getByteNRW (index: Int) = buffer.getByteNRW (index)
-  def readByteNRW () = buffer.readByteNRW ()
 }
 
 trait WritableBuffer extends WritableStream {

@@ -24,8 +24,6 @@ trait ReadableStream {
 
   def readByte(): Byte
 
-  def readByteNRW(): Int
-
   def readBytes (v: Array [Byte]): Unit = {
     var i = 0
     while (i < v.length) {
@@ -70,7 +68,6 @@ trait ReadableStreamEnvoy {
   protected val stream: ReadableStream
 
   def readByte() = stream.readByte()
-  def readByteNRW() = stream.readByteNRW()
   def readBytes (v: Array [Byte]) = stream.readBytes (v)
   def readBytes (v: ByteBuffer) = stream.readBytes (v)
   def readBytes (v: ByteBuffer, off: Int, len: Int) = stream.readBytes (v, off, len)
@@ -87,10 +84,7 @@ private class JavaReadableStream (in: InputStream) extends ReadableStream {
     in.read() match {
       case x if x < 0 => throw new EOFException
       case x => x.toByte;
-    }
-
-  def readByteNRW(): Int = readByte()
-}
+    }}
 
 object ReadableStream {
 

@@ -46,10 +46,10 @@ trait InputBuffer extends ReadableBuffer {
     while (n >= 0) {
       pos = n
       var i = pos + 1
-      if (i < writeAt && isCr (getByteNRW (i)))
+      if (i < writeAt && isCr (getByte (i)))
         i += 1
       if (i < writeAt) {
-        if (isLf (getByteNRW (i))) {
+        if (isLf (getByte (i))) {
           i += 1
           return (i, true)
         }
