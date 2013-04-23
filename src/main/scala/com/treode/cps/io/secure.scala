@@ -102,10 +102,9 @@ private class SecureSocketLive (socket: Socket, engine: SSLEngine) (
     len
   }
 
-  /** The execution of one user read or write, which may involved performing several network
-   * read and writes.  The same consumed, produced, src and dst are used throughout these multiple
-   * network operations.
-   */
+  /** The execution of one user read or write, which may involve performing several network read
+    * and writes.
+    */
   private class Op (src: Array [ByteBuffer], dst: Array [ByteBuffer]) {
 
     private [this] def handshake(): Unit @thunk = {
@@ -126,58 +125,63 @@ private class SecureSocketLive (socket: Socket, engine: SSLEngine) (
       handshake()
     }
 
+    /** Returns (repeat socket.read, repeat _unwrap) */
     def _unwrap (more: Boolean) = {
-      var n =
+      var closed =
         if (netIn.position == 0 || more)
-          socket.read (netIn)
+          socket.read (netIn) < 0
         else
-          cut (0)
-      if (n < 0)
+          cut (false)
+      if (closed)
         engine.closeInbound ()
 
       netIn.flip ()
       unflip (appIn)
       val res = engine.unwrap (netIn, appIn)
 
-      res.getStatus match {
+      val loop = res.getStatus match {
         case BUFFER_OVERFLOW =>
           unflip (netIn)
           appIn = grow (appIn, engine.getSession.getApplicationBufferSize)
+          (false, !closed && engine.getHandshakeStatus == NEED_UNWRAP)
 
         case BUFFER_UNDERFLOW =>
           unflip (netIn)
           netIn = grow (netIn, engine.getSession.getPacketBufferSize)
+          (true, !closed)
 
         case CLOSED =>
           unflip (netIn)
+          (false, false)
 
         case OK =>
           netIn.compact ()
+          (false, !closed && engine.getHandshakeStatus == NEED_UNWRAP)
       }
 
       appIn.flip ()
-      res.getStatus == BUFFER_UNDERFLOW
+      loop
     }
 
     def unwrap(): Unit @thunk = {
-      val unwrapped = inLock.exclusive {
+      val shake = inLock.exclusive {
         if (appIn.hasRemaining) {
           transfer (dst)
           false
         } else {
-          var more = _unwrap (false)
-          while (more || engine.getHandshakeStatus == NEED_UNWRAP)
-            more = _unwrap (more)
-            true
+          var loop = _unwrap (false)
+          while (loop._2)
+            loop = _unwrap (loop._1)
+          true
         }}
-      if (unwrapped)
+      if (shake)
         handshake()
       else
         cut()
     }
 
     def wrap(): Unit @thunk = {
-      val status = outLock.exclusive {
+      val shake = outLock.exclusive {
         val res = engine.wrap (src, netOut)
         flush (netOut)
 
@@ -185,16 +189,23 @@ private class SecureSocketLive (socket: Socket, engine: SSLEngine) (
 
           case BUFFER_OVERFLOW =>
             netOut = grow (netOut, engine.getSession.getPacketBufferSize)
+            true
 
           case BUFFER_UNDERFLOW =>
             // We expect the SSL engine to handle any amount of application data.
             throw new IllegalStateException
 
-          case CLOSED => ()
-          case OK => ()
+          case CLOSED =>
+            false
+
+          case OK =>
+            true
         }}
 
-      handshake()
+      if (shake)
+        handshake()
+      else
+        cut()
     }}
 
   def close (): Unit @thunk = {
