@@ -12,9 +12,15 @@ private trait TestSchedulerConfig extends SchedulerConfig {
   def await [A] (s: TestScheduler, k: => A @thunk): A
 
   /** Run until the condition is false; this keeps the system going through quiet periods waiting
-    * for responses on sockets, timers to expire and so on.
+    * for responses on sockets, timers to expire and so on.  It is only meaningful in
+    * multithreaded mode.
     */
   def run (cond: => Boolean)
+
+  /** Run while a condition is true; this causes the system to stop before all tasks and timers
+    * are complete.  It is only meaningful in single threaded mode.
+    */
+  def whilst (cond: => Boolean)
 
   /** Shutdown the scheduler and cleanup threads, if any. */
   def shutdown()
@@ -36,6 +42,12 @@ class TestScheduler private [scheduler] (cfg: TestSchedulerConfig) extends Sched
     * times.
     */
   def run(): Unit = cfg.run (false)
+
+  /** In single threaded mode, run while a condition is true; this causes the system to stop
+    * before all tasks and timers are complete.  In multithreaded mode, this is the same as
+    * `run (!cond)`.
+    */
+  def whilst (cond: => Boolean): Unit = cfg.whilst (cond)
 
   /** Shutdown the scheduler and cleanup threads, if any. */
   def shutdown() = cfg.shutdown()
@@ -74,6 +86,14 @@ private class SequentialConfig (timers: Boolean) extends TestSchedulerConfig {
 
   def run (cond: => Boolean) {
     while (exception == None && !executor.isQuiet)
+      executor.executeOne()
+    exception  match {
+      case None => ()
+      case Some (e) => exception = None; throw e
+    }}
+
+  def whilst (cond: => Boolean) {
+    while (exception == None && !executor.isQuiet && cond)
       executor.executeOne()
     exception  match {
       case None => ()
@@ -124,6 +144,14 @@ private class RandomConfig (r: Random, timers: Boolean) extends TestSchedulerCon
       case Some (e) => exception = None; throw e
     }}
 
+  def whilst (cond: => Boolean) {
+    while (exception == None && !executor.isQuiet && cond)
+      executor.executeOne()
+    exception  match {
+      case None => ()
+      case Some (e) => exception = None; throw e
+    }}
+
   def shutdown() = ()
 }
 
@@ -160,6 +188,8 @@ private class MultithreadedConfig (cond: => Boolean) extends TestSchedulerConfig
       case None => ()
       case Some (e) => exception.set (None); throw e
     }}
+
+  def whilst (cond: => Boolean) = run (!cond)
 
   def shutdown() {
     executor.shutdownNow()
