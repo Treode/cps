@@ -110,6 +110,22 @@ trait CpsFlatSpec extends FlatSpec with CpsSpecTools {
 
   implicit def onForIt (v: ItVerbString): OnForIt =
     new OnForIt (v)
+
+  protected final class OnForTagged (v: ResultOfTaggedAsInvocation) {
+    def on (ctx: => Any @thunk) =
+      v in (resetTest (ctx))
+  }
+
+  implicit def onForTagged (v: ResultOfTaggedAsInvocation): OnForTagged =
+    new OnForTagged (v)
+
+  protected final class OnForItTagged (v: ItVerbStringTaggedAs) {
+    def on (ctx: => Any @thunk) =
+      v in (resetTest (ctx))
+  }
+
+  implicit def onForItTagged (v: ItVerbStringTaggedAs): OnForItTagged =
+    new OnForItTagged (v)
 }
 
 trait CpsPropSpec extends PropSpec with PropertyChecks with CpsSpecTools {
