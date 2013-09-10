@@ -22,7 +22,8 @@ import scala.util.continuations.reset
 import org.scalacheck.{Gen, Prop, Pretty, Shrink}
 import org.scalatest.{Assertions, FlatSpec, PropSpec}
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.verb.ResultOfStringPassedToVerb
+import org.scalatest.verb.{ResultOfStringPassedToVerb, ResultOfTaggedAsInvocation}
+
 import com.treode.cps.{shift, thunk}
 import com.treode.cps.stub.scheduler.TestScheduler
 
@@ -94,21 +95,21 @@ trait CpsSpecTools extends Assertions {
 
 trait CpsFlatSpec extends FlatSpec with CpsSpecTools {
 
-  protected final class DuringForString (v: ResultOfStringPassedToVerb) {
-    def during (ctx: => Any @thunk) =
+  protected final class OnForString (v: ResultOfStringPassedToVerb) {
+    def on (ctx: => Any @thunk) =
       v in (resetTest (ctx))
   }
 
-  implicit def duringForString (v: ResultOfStringPassedToVerb): DuringForString =
-    new DuringForString (v)
+  implicit def onForString (v: ResultOfStringPassedToVerb): OnForString =
+    new OnForString (v)
 
-  protected final class DuringForIt (v: ItVerbString) {
-    def during (ctx: => Any @thunk) =
+  protected final class OnForIt (v: ItVerbString) {
+    def on (ctx: => Any @thunk) =
       v in (resetTest (ctx))
   }
 
-  implicit def duringForIt (v: ItVerbString): DuringForIt =
-    new DuringForIt (v)
+  implicit def onForIt (v: ItVerbString): OnForIt =
+    new OnForIt (v)
 }
 
 trait CpsPropSpec extends PropSpec with PropertyChecks with CpsSpecTools {

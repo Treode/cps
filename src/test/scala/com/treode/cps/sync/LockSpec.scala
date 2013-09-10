@@ -28,7 +28,7 @@ private object LockBehaviors extends CpsFlatSpec {
   private [this] class DistinguishedException extends Exception
   private [this] def fatal: Unit = throw new DistinguishedException
 
-  "A Lock" should "pass an exception through" during {
+  "A Lock" should "pass an exception through" on {
     val log = withLog ("mark")
 
     implicit val scheduler = withScheduler (TestScheduler.sequential ())
