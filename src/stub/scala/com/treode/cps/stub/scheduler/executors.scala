@@ -24,17 +24,54 @@ private case class ScheduledTask (trigger: Long, r: Runnable)
 
 private trait ExecutorStub extends ScheduledExecutorService {
 
-  /** False if there are no immediate or scheduled tasks. */
-  def isQuiet: Boolean
-
-  /** Perform a scheduled or immediate task; the subclass may assume isQuiet is false. */
-  def executeOne(): Unit
-
   /** False if the subclass has no tasks to execute _immediately_. */
   protected def isQuietNow: Boolean
 
   /** Perform one _immediate_ task; the subclass may assume isQuietNow is false. */
   protected def executeOneNow(): Unit
+
+  // Order scheduled tasks by the trigger time.
+  private [this] val order = new Ordering [ScheduledTask] {
+    def compare (x: ScheduledTask, y: ScheduledTask): Int = x.trigger compare y.trigger
+  }
+
+  // Our tasks scheduled for some future time; the subclass manages only immediate tasks, and
+  // this superclass handles moving scheduled (time delayed) tasks into the immediate queue after
+  // the desired delay.
+  private [this] val scheduled =
+      new mutable.SynchronizedPriorityQueue [ScheduledTask] () (order)
+
+  // If the user requests a delay of two hours, but there are not two hours worth of immediate
+  // activities, we jump in time to trigger the delayed tasks sooner.  This tracks the running
+  // total of jumps, which is then added to new tasks.
+  private [this] var time = 0L
+
+  /** False until there are no more tasks enqueued. */
+  def isQuiet (timers: Boolean): Boolean = isQuietNow && (!timers || scheduled.isEmpty)
+
+  /** Perform one task; isQuiet must be false. */
+  def executeOne (timers: Boolean) {
+    if (timers && (scheduled.headOption exists (_.trigger < time))) {
+      // A timer has triggered, move its task to the immediate queue.
+      time += 1
+      execute (scheduled.dequeue.r)
+    } else if (isQuietNow) {
+      // There's no immediate task, jump time to that of the next scheduled task.
+      val t = scheduled.dequeue
+      time = t.trigger + 1
+      execute (t.r)
+    } else {
+      // Execute the next immediate task.
+      time += 1
+      executeOneNow()
+    }}
+
+  def schedule (r: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture [_] = {
+    val msec = TimeUnit.MILLISECONDS.convert (delay, unit)
+    scheduled.enqueue (ScheduledTask (time + msec, r))
+    // The stub kits ignore the result.
+    null .asInstanceOf [ScheduledFuture [_]]
+  }
 
   // The Java interfaces require us to make up stuff.
   private def unsupported [A] = throw new UnsupportedOperationException
@@ -61,73 +98,8 @@ private trait ExecutorStub extends ScheduledExecutorService {
   def scheduleWithFixedDelay (command: Runnable, initialDelay: Long, delay: Long, unit: TimeUnit): ScheduledFuture [_] = unsupported
 }
 
-private trait TimerfulStub extends ExecutorStub {
-
-  // Order scheduled tasks by the trigger time.
-  private [this] val order = new Ordering [ScheduledTask] {
-    def compare (x: ScheduledTask, y: ScheduledTask): Int = x.trigger compare y.trigger
-  }
-
-  // Our tasks scheduled for some future time; the subclass manages only immediate tasks, and
-  // this superclass handles moving scheduled (time delayed) tasks into the immediate queue after
-  // the desired delay.
-  private [this] val timers =
-      new mutable.SynchronizedPriorityQueue [ScheduledTask] () (order)
-
-  // If the user requests a delay of two hours, but there are not two hours worth of immediate
-  // activities, we jump in time to trigger the delayed tasks sooner.  This tracks the running
-  // total of jumps, which is then added to new tasks.
-  private [this] var time = 0L
-
-  /** False until there are no more tasks enqueued. */
-  def isQuiet: Boolean = isQuietNow && timers.isEmpty
-
-  /** Perform one task; isQuiet must be false. */
-  def executeOne() {
-    if (timers.headOption exists (_.trigger < time)) {
-      // A timer has triggered, move its task to the immediate queue.
-      time += 1
-      execute (timers.dequeue.r)
-    } else if (isQuietNow) {
-      // There's no immediate task, jump time to that of the next scheduled task.
-      val t = timers.dequeue
-      time = t.trigger + 1
-      execute (t.r)
-    } else {
-      // Execute the next immediate task.
-      time += 1
-      executeOneNow()
-    }}
-
-  def schedule (r: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture [_] = {
-    val msec = TimeUnit.MILLISECONDS.convert (delay, unit)
-    timers.enqueue (ScheduledTask (time + msec, r))
-    // The stub kits ignore the result.
-    null .asInstanceOf [ScheduledFuture [_]]
-  }}
-
-private trait TimerlessStub extends ExecutorStub {
-
-  /** False if the subclass has no tasks to execute immediately. */
-  protected def isQuietNow: Boolean
-
-  /** Perform one immediate task; the subclass may assume isQuietNow is false. */
-  protected def executeOneNow(): Unit
-
-  /** False until there are no more tasks enqueued. */
-  def isQuiet: Boolean = isQuietNow
-
-  /** Perform one task; isQuiet must be false. */
-  def executeOne() {
-    executeOneNow()
-  }
-
-  def schedule (r: Runnable, delay: Long, unit: TimeUnit): ScheduledFuture [_] = {
-    null .asInstanceOf [ScheduledFuture [_]]
-  }}
-
 /** An executor that chooses the next enqueued tasks and performs it. */
-private abstract class SequentialStub extends ExecutorStub {
+private class SequentialStub extends ExecutorStub {
 
   private [this] val queue = mutable.Queue [Runnable] ()
 
@@ -139,7 +111,7 @@ private abstract class SequentialStub extends ExecutorStub {
 }
 
 /** An executor that randomly chooses one enqueued task and performs it. */
-private abstract class RandomStub (r: Random) extends ExecutorStub {
+private class RandomStub (r: Random) extends ExecutorStub {
 
   private [this] val queue = ChoosyQueue [Runnable] ()
 

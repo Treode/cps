@@ -67,7 +67,7 @@ private object LockProperties extends CpsPropSpec {
       val latch = new AtomicInteger (m * n)
       val log = withLog ((0 until m * n) map (_.toString): _*)
 
-      implicit val scheduler = withScheduler (TestScheduler.multithreaded (latch.get > 0))
+      implicit val scheduler = withScheduler (TestScheduler.multithreaded())
       import scheduler.{cede, spawn, suspend}
 
       val lock = Lock ()

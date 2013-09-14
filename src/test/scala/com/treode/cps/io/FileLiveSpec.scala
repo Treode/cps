@@ -25,7 +25,7 @@ class FileLiveSpec extends CpsFlatSpec with FileBehaviors {
 
   class LiveSpecKit extends FileSpecKit {
 
-    val scheduler = TestScheduler.multithreaded (false)
+    val scheduler = TestScheduler.multithreaded()
 
     def openFile (path: Path, opts: OpenOption*): File =
       FileLive.open (scheduler, path, opts: _*)

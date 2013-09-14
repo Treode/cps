@@ -58,7 +58,8 @@ trait CpsSpecTools extends Assertions {
       ()
     }}
 
-  def wrapRun [A] (k: => A @thunk) (implicit scheduler: TestScheduler): A = {
+  def wrapRun [A] (timers: Boolean = true) (k: => A @thunk) (
+      implicit scheduler: TestScheduler): A = {
     var finished = false
     var v = null .asInstanceOf [A]
     scheduler.spawn {
@@ -66,15 +67,15 @@ trait CpsSpecTools extends Assertions {
       expectResult (false, "CPS test ran twice.") (finished)
       finished = true
     }
-    scheduler.run (!finished)
+    scheduler.run (true, timers)
     v
   }
 
-  def withScheduler [A <: TestScheduler] (newScheduler: => A): A @thunk = {
+  def withScheduler [A <: TestScheduler] (newScheduler: => A, timers: Boolean = true): A @thunk = {
     shift [A] { k =>
       implicit val scheduler = newScheduler
       try {
-        wrapRun (k (scheduler))
+        wrapRun (timers) (k (scheduler))
         scheduler.shutdown()
       } catch {
         case exn =>

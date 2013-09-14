@@ -222,6 +222,6 @@ trait SocketBehaviors extends SocketChecks {
         expectResult (-1) (c.read (ByteBuffer.allocate (16)))
         mark = true
       }
-      kit.run (false)
+      kit.run (true)
       assert (mark)
     }}}

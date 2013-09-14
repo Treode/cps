@@ -20,5 +20,5 @@ import org.scalatest.FlatSpec
 class MultithreadedSpec extends FlatSpec with SchedulerBehaviors {
 
   "A Scheduler with a ForkJoinPool" should behave like aScheduler (
-      () => TestScheduler.multithreaded (false))
+      () => TestScheduler.multithreaded())
 }

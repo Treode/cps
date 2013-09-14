@@ -23,5 +23,5 @@ class SequentialSpec extends FlatSpec with SchedulerBehaviors {
       () => TestScheduler.sequential())
 
   it should "not run timers when they are turned off" in {
-    checkDoesNotRunTimersWhenTheyAreOff (TestScheduler.sequential (false))
+    checkDoesNotRunTimersWhenTheyAreOff (TestScheduler.sequential())
   }}

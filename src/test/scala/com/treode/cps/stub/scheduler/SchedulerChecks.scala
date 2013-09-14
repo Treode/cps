@@ -52,7 +52,7 @@ trait SchedulerChecks extends Assertions {
 
     val v = new AtomicInteger (0)
     schedule (1, MILLISECONDS) (v.addAndGet (1))
-    scheduler.run ()
+    scheduler.run (timers = false)
     expectResult (0) (v.get)
   }
 

@@ -25,7 +25,7 @@ class SocketLiveSpec extends CpsFlatSpec with SocketBehaviors {
 
   class LiveSpecKit extends SocketSpecKit {
 
-    implicit val scheduler = TestScheduler.multithreaded (false)
+    implicit val scheduler = TestScheduler.multithreaded()
 
     private [this] val threads = new ThreadFactory {
       def newThread (r: Runnable) = new Thread (r, "Channels")

@@ -26,7 +26,7 @@ class FileStubSpec extends CpsFlatSpec with FileBehaviors {
 
   class StubSpecKit extends FileSpecKit {
 
-    val scheduler = TestScheduler.multithreaded (false)
+    val scheduler = TestScheduler.multithreaded()
 
     val files = FileSystemStub()
 

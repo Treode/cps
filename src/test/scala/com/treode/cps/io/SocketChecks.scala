@@ -35,7 +35,8 @@ trait SocketChecks {
     import scheduler.spawn
 
     /** Run until the system is quiet and the condition is false. */
-    def run (cond: => Boolean): Unit = scheduler.run (cond)
+    def run (cond: => Boolean, timers: Boolean = true): Unit =
+      scheduler.run (cond, timers)
 
     /** Make a SockAddress for a server. */
     def newServerAddress (): SocketAddress

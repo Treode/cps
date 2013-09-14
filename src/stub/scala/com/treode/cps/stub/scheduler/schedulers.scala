@@ -9,20 +9,15 @@ import com.treode.cps.scheduler.{Scheduler, SchedulerConfig}
 
 private trait TestSchedulerConfig extends SchedulerConfig {
 
+  /** Implement Scheduler.await appropriately for this test scheduler. */
   def await [A] (s: TestScheduler, k: => A @thunk): A
 
-  /** Run until the condition is false; this keeps the system going through quiet periods waiting
-    * for responses on sockets, timers to expire and so on.  It is only meaningful in
-    * multithreaded mode.
+  /** Run until the condition is false or until there are no more tasks; include scheduled tasks
+    * if `timers` is true.
     */
-  def run (cond: => Boolean)
+  def run (cond: => Boolean, timers: Boolean)
 
-  /** Run while a condition is true; this causes the system to stop before all tasks and timers
-    * are complete.  It is only meaningful in single threaded mode.
-    */
-  def whilst (cond: => Boolean)
-
-  /** Shutdown the scheduler and cleanup threads, if any. */
+  /** Shutdown the scheduler and cleanup threads. */
   def shutdown()
 }
 
@@ -32,37 +27,22 @@ class TestScheduler private [scheduler] (cfg: TestSchedulerConfig) extends Sched
 
   def _await [A] (k: => A @thunk): A = super.await (k)
 
-  /** In multithreaded mode, run until the condition is false; this keeps the system going through
-    * quiet periods waiting for responses on sockets, timers to expire and so on.  In single
-    * threaded mode, ignore the condition and run until there are no more tasks.
+  /** Run until the condition is false or until there are no more tasks.  New tasks may be enqueued
+    * while running, and this may be called multiple times.  Include timers in the run if
+    * indicated, otherwise ignore any scheduled tasks.
     */
-  def run (cond: => Boolean): Unit = cfg.run (cond)
-
-  /** Run until no more tasks, new ones may be enqueued while running.  May be called multiple
-    * times.
-    */
-  def run(): Unit = cfg.run (false)
-
-  /** In single threaded mode, run while a condition is true; this causes the system to stop
-    * before all tasks and timers are complete.  In multithreaded mode, this is the same as
-    * `run (!cond)`.
-    */
-  def whilst (cond: => Boolean): Unit = cfg.whilst (cond)
+  def run (cond: => Boolean = true, timers: Boolean = true): Unit = cfg.run (cond, timers)
 
   /** Shutdown the scheduler and cleanup threads, if any. */
   def shutdown() = cfg.shutdown()
 }
 
 /** Run one task at a time in one thread, choosing the task first in first out. */
-private class SequentialConfig (timers: Boolean) extends TestSchedulerConfig {
+private class SequentialConfig extends TestSchedulerConfig {
 
   private [this] var exception = None: Option [Throwable]
 
-  private val stub =
-    if (timers)
-      new SequentialStub with TimerfulStub
-    else
-      new SequentialStub with TimerlessStub
+  private val stub = new SequentialStub
   val timer = stub
   val executor = stub
 
@@ -80,21 +60,13 @@ private class SequentialConfig (timers: Boolean) extends TestSchedulerConfig {
       val _t1 = k
       v = _t1
     }
-    run (v == null)
+    run (v == null, false)
     v
   }
 
-  def run (cond: => Boolean) {
-    while (exception == None && !executor.isQuiet)
-      executor.executeOne()
-    exception  match {
-      case None => ()
-      case Some (e) => exception = None; throw e
-    }}
-
-  def whilst (cond: => Boolean) {
-    while (exception == None && !executor.isQuiet && cond)
-      executor.executeOne()
+  def run (cond: => Boolean, timers: Boolean) {
+    while (exception == None && !executor.isQuiet (timers) && cond)
+      executor.executeOne (timers)
     exception  match {
       case None => ()
       case Some (e) => exception = None; throw e
@@ -104,17 +76,13 @@ private class SequentialConfig (timers: Boolean) extends TestSchedulerConfig {
 }
 
 /** Run one task at a time in one thread, choosing the task randomly. */
-private class RandomConfig (r: Random, timers: Boolean) extends TestSchedulerConfig {
+private class RandomConfig (r: Random) extends TestSchedulerConfig {
 
   private [this] var exception = None: Option [Throwable]
 
   val random = r
 
-  private val stub =
-    if (timers)
-      new RandomStub (random) with TimerfulStub
-    else
-      new RandomStub (random) with TimerlessStub
+  private val stub = new RandomStub (random)
   val timer = stub
   val executor = stub
 
@@ -132,21 +100,13 @@ private class RandomConfig (r: Random, timers: Boolean) extends TestSchedulerCon
       val _t1 = k
       v = _t1
     }
-    run (v == null)
+    run (v == null, false)
     v
   }
 
-  def run (cond: => Boolean) {
-    while (exception == None && !executor.isQuiet)
-      executor.executeOne()
-    exception  match {
-      case None => ()
-      case Some (e) => exception = None; throw e
-    }}
-
-  def whilst (cond: => Boolean) {
-    while (exception == None && !executor.isQuiet && cond)
-      executor.executeOne()
+  def run (cond: => Boolean, timers: Boolean) {
+    while (exception == None && !executor.isQuiet (timers) && cond)
+      executor.executeOne (timers)
     exception  match {
       case None => ()
       case Some (e) => exception = None; throw e
@@ -155,7 +115,7 @@ private class RandomConfig (r: Random, timers: Boolean) extends TestSchedulerCon
   def shutdown() = ()
 }
 
-private class MultithreadedConfig (cond: => Boolean) extends TestSchedulerConfig {
+private class MultithreadedConfig extends TestSchedulerConfig {
 
   val exception = new AtomicReference (None: Option [Throwable])
 
@@ -166,6 +126,9 @@ private class MultithreadedConfig (cond: => Boolean) extends TestSchedulerConfig
       true)
 
   val timer = new ScheduledThreadPoolExecutor (1)
+
+  private def isQuiet =
+    executor.isQuiescent && (timer.getCompletedTaskCount - timer.getTaskCount == 0)
 
   def handleUncaughtException (e: Throwable) =
     exception.compareAndSet (None, Some (e))
@@ -178,18 +141,14 @@ private class MultithreadedConfig (cond: => Boolean) extends TestSchedulerConfig
 
   def await [A] (s: TestScheduler, k: => A @thunk): A = s._await (k)
 
-  def run (cond: => Boolean) {
+  def run (cond: => Boolean, timers: Boolean) {
     Thread.sleep (100)
-    while (exception.get () == None && cond)
-      Thread.sleep (100)
-    while (exception.get () == None && !executor.isQuiescent)
+    while (exception.get () == None && !isQuiet && cond)
       Thread.sleep (100)
     exception.get () match {
       case None => ()
       case Some (e) => exception.set (None); throw e
     }}
-
-  def whilst (cond: => Boolean) = run (!cond)
 
   def shutdown() {
     executor.shutdownNow()
@@ -198,31 +157,21 @@ private class MultithreadedConfig (cond: => Boolean) extends TestSchedulerConfig
 
 object TestScheduler {
 
-  /** A single-threaded scheduler that selects tasks in FIFO order; if timers is false then tasks
-    * submitted via `schedule` will be ignored.
+  /** A single-threaded scheduler that selects tasks in FIFO order.  The value `timers` for
+    * `timers` serves as a default for TestScheduler.run
     */
-  def sequential (timers: Boolean = true): TestScheduler =
-    new TestScheduler (new SequentialConfig (timers))
+  def sequential(): TestScheduler =
+    new TestScheduler (new SequentialConfig)
 
-  /** A single-threaded scheduler that selects tasks in psuedo-random order; if timers is false
-    * then tasks submitted via `schedule` will be ignored.
-    */
+  /** A single-threaded scheduler that selects tasks in psuedo-random order. */
   def random (seed: Long): TestScheduler =
-    new TestScheduler (new RandomConfig (new Random (seed), true))
+    new TestScheduler (new RandomConfig (new Random (seed)))
 
-  /** A single-threaded scheduler that selects tasks in psuedo-random order; if timers is false
-    * then tasks submitted via `schedule` will be ignored.
-    */
-  def random (seed: Long, timers: Boolean): TestScheduler =
-    new TestScheduler (new RandomConfig (new Random (seed), timers))
-
-  /** A single-threaded scheduler that selects tasks in psuedo-random order; if timers is false
-    * then tasks submitted via `schedule` will be ignored.
-    */
-  def random (random: Random = Random, timers: Boolean = true): TestScheduler =
-    new TestScheduler (new RandomConfig (random, timers))
+  /** A single-threaded scheduler that selects tasks in psuedo-random order. */
+  def random (random: Random = Random): TestScheduler =
+    new TestScheduler (new RandomConfig (random))
 
   /** By default, run until the condition is false, that is use `cond` for `run()`. */
-  def multithreaded (cond: => Boolean): TestScheduler =
-    new TestScheduler (new MultithreadedConfig (cond))
+  def multithreaded(): TestScheduler =
+    new TestScheduler (new MultithreadedConfig)
 }

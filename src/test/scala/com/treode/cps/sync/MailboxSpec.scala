@@ -53,7 +53,7 @@ class MailboxSpec extends CpsPropSpec {
     val n = 1000
     val latch = new AtomicInteger (n)
 
-    implicit val scheduler = TestScheduler.multithreaded (latch.get > 0)
+    implicit val scheduler = TestScheduler.multithreaded()
     import scheduler.spawn
 
     val log = new ConcurrentHashMap [Int, String] ()
